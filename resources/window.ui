@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="GosubMainWindow" parent="GtkApplicationWindow">
+        <property name="width-request">1024</property>
+        <property name="height-request">800</property>
+        <property name="title">Gosub - ProofOfConcept UserAgent - Browser - v0.0.1</property>
+        <child>
+            <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="margin-top">12</property>
+                <property name="margin-bottom">12</property>
+                <property name="margin-start">12</property>
+                <property name="margin-end">12</property>
+                <property name="spacing">6</property>
+                <child>
+                    <object class="GtkEntry" id="searchbar">
+                        <property name="placeholder-text" translatable="yes">about:gosub</property>
+                        <property name="secondary-icon-name">edit-find</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="hexpand">True</property>
+                        <child>
+                            <object class="GtkButton" id="tab_1">
+                                <property name="label">This is tab 1</property>
+                                <property name="margin-top">12</property>
+                                <property name="margin-bottom">12</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkButton" id="tab_2">
+                                <property name="label">This is tab 2</property>
+                                <property name="margin-top">12</property>
+                                <property name="margin-bottom">12</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkButton" id="tab_3">
+                                <property name="label">This is tab 3</property>
+                                <property name="margin-top">12</property>
+                                <property name="margin-bottom">12</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkButton" id="tab_4">
+                                <property name="label">This is tab 4</property>
+                                <property name="margin-top">12</property>
+                                <property name="margin-bottom">12</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkButton" id="tab_add">
+                                <property name="margin-top">12</property>
+                                <property name="margin-bottom">12</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                                <child>
+                                    <object class="GtkImage">
+                                        <property name="icon-name">list-add-symbolic</property>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkFrame">
+                        <property name="vexpand">True</property>
+                        <property name="hexpand">True</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkStatusbar" id="statusbar">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="valign">end</property>
+                    </object>
+                </child>
+            </object>
+        </child>
+    </template>
+</interface>
