@@ -21,7 +21,7 @@ pub struct Window {
     #[template_child]
     pub tab_add: TemplateChild<Button>,
     #[template_child]
-    pub statusbar: TemplateChild<Statusbar>
+    pub statusbar: TemplateChild<Statusbar>,
 }
 // ANCHOR_END: object
 
@@ -36,6 +36,7 @@ impl ObjectSubclass for Window {
 
     fn class_init(klass: &mut Self::Class) {
         klass.bind_template();
+        klass.bind_template_callbacks();
     }
 
     fn instance_init(obj: &InitializingObject<Self>) {
@@ -51,6 +52,14 @@ impl ObjectImpl for Window {
         // Call "constructed" on parent
         self.parent_constructed();
 
+        // let menu_ui = Builder::from_string(include_str!("../../resources/main_menu.ui"));
+        // let menu_model: gio::MenuModel = menu_ui.object("main-menu").expect("could not get main-menu");
+        // let menu_bar = PopoverMenuBar::new();
+        // menu_bar.bind_model(Some(&menu_model), Some("app"), true);
+        //
+        // let main_box: gtk::Box = self.object("main_box").expect("could not find main_box");
+        // main_box.append(&menu_bar);
+
         self.statusbar.push(1, "Ready to roll...");
 
         let statusbar = self.statusbar.clone();
@@ -64,6 +73,20 @@ impl ObjectImpl for Window {
     }
 }
 // ANCHOR_END: object_impl
+
+
+#[gtk::template_callbacks]
+impl Window {
+    #[template_callback]
+    fn handle_prev_clicked(&self, _btn: &Button) {
+        self.statusbar.push(1, "We want to view the previous page");
+    }
+
+    #[template_callback]
+    fn handle_refresh_clicked(&self, _btn: &Button) {
+        self.statusbar.push(1, "We want to refresh the current page");
+    }
+}
 
 // Trait shared by all widgets
 impl WidgetImpl for Window {}
