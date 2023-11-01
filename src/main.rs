@@ -1,9 +1,10 @@
 mod window;
+mod tab;
 
 use gtk::prelude::*;
 use gtk::{gio, glib, Application, CssProvider};
 use gtk::gdk::Display;
-use window::Window;
+use crate::window::Window;
 
 const APP_ID: &str = "io.gosub.browser-gtk";
 

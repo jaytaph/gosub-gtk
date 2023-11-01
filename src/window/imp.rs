@@ -1,10 +1,11 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate};
+use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView};
+use crate::tab::GosubTab;
 
-// ANCHOR: object
-// Object holding the state
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/io/gosub/browser-gtk/window.ui")]
 pub struct Window {
@@ -22,14 +23,40 @@ pub struct Window {
     pub tab_add: TemplateChild<Button>,
     #[template_child]
     pub statusbar: TemplateChild<Statusbar>,
-}
-// ANCHOR_END: object
+    #[template_child]
+    pub log: TemplateChild<TextView>,
 
-// ANCHOR: subclass
-// The central trait for subclassing a GObject
+    pub tabs: Rc<RefCell<Vec<GosubTab>>>,
+}
+
+impl Window {
+    pub(crate) fn init_tabs(&self) {
+
+        let mut tabs = Vec::new();
+        tabs.push(GosubTab::new(String::from("https://duckduckgo.com")));
+        tabs.push(GosubTab::new(String::from("https://news.ycombinator.com")));
+        tabs.push(GosubTab::new(String::from("https://www.reddit.com")));
+        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+
+        self.tabs.replace(tabs);
+    }
+
+    fn log_stuff(&self) {
+        let len = self.tabs.borrow().len();
+
+        self.log(format!("There are {} tabs available", len).as_str());
+    }
+}
+
 #[glib::object_subclass]
 impl ObjectSubclass for Window {
-    // `NAME` needs to match `class` attribute of template
     const NAME: &'static str = "GosubMainWindow";
     type Type = super::Window;
     type ParentType = gtk::ApplicationWindow;
@@ -43,19 +70,22 @@ impl ObjectSubclass for Window {
         obj.init_template();
     }
 }
-// ANCHOR_END: subclass
 
-// ANCHOR: object_impl
-// Trait shared by all GObjects
 impl ObjectImpl for Window {
     fn constructed(&self) {
-        // Call "constructed" on parent
         self.parent_constructed();
+
+        // self.tabs = Vec::new();
+        // self.tabs.push(GosubTab::new(String::from("https://news.ycombinator.com")));
+        // self.tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+        // self.tabs.push(GosubTab::new(String::from("https://www.youtube.com")));
+        // self.tabs.push(GosubTab::new(String::from("https://www.google.com")));
+
 
         // let menu_ui = Builder::from_string(include_str!("../../resources/main_menu.ui"));
         // let menu_model: gio::MenuModel = menu_ui.object("main-menu").expect("could not get main-menu");
         // let menu_bar = PopoverMenuBar::new();
-        // menu_bar.bind_model(Some(&menu_model), Some("app"), true);
+        // menu_bar.bind_model(Some(&menu_model), Some("app"), true);s
         //
         // let main_box: gtk::Box = self.object("main_box").expect("could not find main_box");
         // main_box.append(&menu_bar);
@@ -72,27 +102,44 @@ impl ObjectImpl for Window {
         });
     }
 }
-// ANCHOR_END: object_impl
 
 
 #[gtk::template_callbacks]
 impl Window {
+    fn log(&self, message: &str) {
+        let buf = self.log.buffer();
+        let mut iter = buf.end_iter();
+        buf.insert(&mut iter, format!("[{}] {}\n", chrono::Local::now().format("%X"), message).as_str());
+    }
+
     #[template_callback]
     fn handle_prev_clicked(&self, _btn: &Button) {
+        self.log("Going back to the previous page");
+
+        self.log_stuff();
+
         self.statusbar.push(1, "We want to view the previous page");
     }
 
     #[template_callback]
     fn handle_refresh_clicked(&self, _btn: &Button) {
+        self.log("Refreshing the current page");
+
         self.statusbar.push(1, "We want to refresh the current page");
+    }
+
+    #[template_callback]
+    fn handle_searchbar_clicked(&self, entry: &Entry) {
+        self.log(format!("Visiting the URL {}", entry.text().as_str()).as_str());
+        self.statusbar.push(1, format!("Oh yeah.. full speed ahead to {}", entry.text().as_str()).as_str());
+    }
+
+    #[template_callback]
+    fn handle_tab_add_clicked(&self) {
+        self.log("Adding new tab");
     }
 }
 
-// Trait shared by all widgets
 impl WidgetImpl for Window {}
-
-// Trait shared by all windows
 impl WindowImpl for Window {}
-
-// Trait shared by all application windows
 impl ApplicationWindowImpl for Window {}
