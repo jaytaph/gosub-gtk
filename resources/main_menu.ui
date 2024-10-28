@@ -1,20 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <menu id="main-menu">
+    <!-- Define the main application menu as a Gio.Menu -->
+    <menu id="app-menu">
         <section>
             <item>
-                <attribute name="label" translatable="yes">_New</attribute>
+                <attribute name="label">_File</attribute>
+                <attribute name="submenu">file-menu</attribute>
+            </item>
+            <item>
+                <attribute name="label">_Help</attribute>
+                <attribute name="submenu">help-menu</attribute>
+            </item>
+        </section>
+    </menu>
+
+    <!-- Define the File submenu -->
+    <menu id="file-menu">
+        <section>
+            <item>
+                <attribute name="label">_New</attribute>
                 <attribute name="action">app.new</attribute>
             </item>
             <item>
-                <attribute name="label" translatable="yes">_Open</attribute>
+                <attribute name="label">_Open</attribute>
                 <attribute name="action">app.open</attribute>
             </item>
+            <item>
+                <attribute name="label">_Quit</attribute>
+                <attribute name="action">app.quit</attribute>
+            </item>
         </section>
+    </menu>
+
+    <!-- Define the Help submenu -->
+    <menu id="help-menu">
         <section>
             <item>
-                <attribute name="label" translatable="yes">_Quit</attribute>
-                <attribute name="action">app.quit</attribute>
+                <attribute name="label">_About</attribute>
+                <attribute name="action">app.about</attribute>
             </item>
         </section>
     </menu>

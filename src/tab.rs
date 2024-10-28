@@ -20,14 +20,14 @@ pub struct GosubTab {
 }
 
 impl GosubTab {
-    pub fn new(url: String) -> Self {
+    pub fn new(url: &str) -> Self {
         GosubTab {
             is_sticky: false,
             is_private: false,
             is_active: false,
             is_loading: false,
-            url,
-            name: String::from("A new tab"),
+            url: url.to_string(),
+            name: url.to_string(),
             favicon: gtk::Image::new(),
             buffer: gtk::TextBuffer::new(None),
             button: gtk::Button::new(),

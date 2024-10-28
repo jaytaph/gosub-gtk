@@ -4,13 +4,15 @@
         <property name="default-width">1024</property>
         <property name="default-height">800</property>
         <property name="resizable">True</property>
-        <property name="title">Gosub - ProofOfConcept UserAgent - Browser - v0.0.1</property>
+        <property name="title">Gosub UserAgent - Browser - v0.0.1</property>
 
         <child type="titlebar">
             <object class="GtkHeaderBar" id="headerbar">
                 <property name="show-title-buttons">True</property>
             </object>
         </child>
+
+        <!-- insert menu here -->
 
         <child>
             <object class="GtkBox">

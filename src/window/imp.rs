@@ -3,11 +3,13 @@ use std::rc::Rc;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView};
+use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView };
+use gtk::gdk::Texture;
+use gtk::gdk_pixbuf::Pixbuf;
 use crate::tab::GosubTab;
 
 #[derive(CompositeTemplate, Default)]
-#[template(resource = "/io/gosub/browser-gtk/window.ui")]
+#[template(resource = "/io/gosub/browser-gtk/ui/window.ui")]
 pub struct Window {
     #[template_child]
     pub searchbar: TemplateChild<Entry>,
@@ -33,17 +35,10 @@ impl Window {
     pub(crate) fn init_tabs(&self) {
 
         let mut tabs = Vec::new();
-        tabs.push(GosubTab::new(String::from("https://duckduckgo.com")));
-        tabs.push(GosubTab::new(String::from("https://news.ycombinator.com")));
-        tabs.push(GosubTab::new(String::from("https://www.reddit.com")));
-        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
-        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
-        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
-        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
-        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
-        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
-        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
-        tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
+        tabs.push(GosubTab::new("https://duckduckgo.com"));
+        tabs.push(GosubTab::new("https://news.ycombinator.com"));
+        tabs.push(GosubTab::new("https://www.reddit.com"));
+        tabs.push(GosubTab::new("https://www.gosub.io"));
 
         self.tabs.replace(tabs);
     }
@@ -76,10 +71,10 @@ impl ObjectImpl for Window {
         self.parent_constructed();
 
         // self.tabs = Vec::new();
-        // self.tabs.push(GosubTab::new(String::from("https://news.ycombinator.com")));
-        // self.tabs.push(GosubTab::new(String::from("https://www.gosub.io")));
-        // self.tabs.push(GosubTab::new(String::from("https://www.youtube.com")));
-        // self.tabs.push(GosubTab::new(String::from("https://www.google.com")));
+        // self.tabs.push(GosubTab::new("https://news.ycombinator.com")));
+        // self.tabs.push(GosubTab::new("https://www.gosub.io")));
+        // self.tabs.push(GosubTab::new("https://www.youtube.com")));
+        // self.tabs.push(GosubTab::new("https://www.google.com")));
 
 
         // let menu_ui = Builder::from_string(include_str!("../../resources/main_menu.ui"));
@@ -95,9 +90,43 @@ impl ObjectImpl for Window {
         let statusbar = self.statusbar.clone();
 
         self.tab_1.connect_clicked(move |button| {
-            statusbar.push(2, "hell world should be visible in the button now");
+            statusbar.push(2, "hello world should be visible in the button now");
 
-            // Set the label to "Hello World!" after the button has been clicked on
+            let about = gtk::AboutDialog::new();
+            about.set_program_name("Gosub Browser".into());
+            about.set_version(Some("0.0.1"));
+            about.set_website(Some("https://www.gosub.io".into()));
+            about.set_website_label("Gosub Website");
+            about.set_copyright(Some("© 2024 Gosub Team"));
+            about.set_license_type(gtk::License::MitX11);
+            about.set_logo_icon_name(Some("gosub"));
+
+            if let Ok(logo_pixbuf) = Pixbuf::from_resource_at_scale(
+                "/io/gosub/browser-gtk/assets/gosub.svg",
+                128,
+                128,
+                true,
+            ) {
+                let logo_texture = Texture::for_pixbuf(&logo_pixbuf);
+                about.set_logo(Some(&logo_texture));
+            }
+            about.set_comments(Some("A simple browser written in Rust and GTK"));
+            about.set_modal(true);
+            about.set_destroy_with_parent(true);
+
+            about.set_authors(&["Gosub Team", "Joshua Thijssen", "SharkTheOne"]);
+            about.add_credit_section("Networking", &[ "Gosub Team" ]);
+            about.add_credit_section("HTML5 parser", &[ "Gosub Team" ]);
+            about.add_credit_section("CSS3 parser", &[ "Gosub Team" ]);
+            about.add_credit_section("Renderer", &[ "Gosub Team" ]);
+            about.add_credit_section("Javascript engine", &[ "Gosub Team" ]);
+            about.add_credit_section("UI", &[ "Gosub Team" ]);
+            about.add_credit_section("GTK integration", &[ "Gosub Team" ]);
+            about.add_credit_section("Rust integration", &[ "Gosub Team" ]);
+            about.set_translator_credits(Some("Gosub Team"));
+
+            about.present();
+
             button.set_label("Hello World!");
         });
     }
