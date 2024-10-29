@@ -76,7 +76,6 @@ impl ObjectImpl for Window {
         // self.tabs.push(GosubTab::new("https://www.youtube.com")));
         // self.tabs.push(GosubTab::new("https://www.google.com")));
 
-
         // let menu_ui = Builder::from_string(include_str!("../../resources/main_menu.ui"));
         // let menu_model: gio::MenuModel = menu_ui.object("main-menu").expect("could not get main-menu");
         // let menu_bar = PopoverMenuBar::new();
