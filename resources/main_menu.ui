@@ -1,44 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <!-- Define the main application menu as a Gio.Menu -->
     <menu id="app-menu">
-        <section>
-            <item>
-                <attribute name="label">_File</attribute>
-                <attribute name="submenu">file-menu</attribute>
-            </item>
-            <item>
-                <attribute name="label">_Help</attribute>
-                <attribute name="submenu">help-menu</attribute>
-            </item>
-        </section>
-    </menu>
+        <submenu>
+            <attribute name="label">File</attribute>
+            <section>
+                <item>
+                    <attribute name="label">Open</attribute>
+                    <attribute name="action">app.open</attribute>
+                    <attribute name="accel">&lt;Primary&gt;O</attribute>
+                </item>
+                <item>
+                    <attribute name="label">Save</attribute>
+                    <attribute name="action">app.save</attribute>
+                    <attribute name="accel">&lt;Primary&gt;S</attribute>
+                </item>
+                <item>
+                    <attribute name="label">Save As</attribute>
+                    <attribute name="action">app.save_as</attribute>
+                    <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;S</attribute>
+                </item>
+            </section>
+            <section>
+                <item>
+                    <attribute name="label">Exit</attribute>
+                    <attribute name="action">app.quit</attribute>
+                    <attribute name="accel">&lt;Primary&gt;X</attribute>
+                </item>
+            </section>
+        </submenu>
 
-    <!-- Define the File submenu -->
-    <menu id="file-menu">
-        <section>
+        <submenu>
+            <attribute name="label">Edit</attribute>
             <item>
-                <attribute name="label">_New</attribute>
-                <attribute name="action">app.new</attribute>
+                <attribute name="label">Cut</attribute>
+                <attribute name="action">app.cut</attribute>
+                <attribute name="accel">&lt;Primary&gt;X</attribute>
             </item>
             <item>
-                <attribute name="label">_Open</attribute>
-                <attribute name="action">app.open</attribute>
+                <attribute name="label">Copy</attribute>
+                <attribute name="action">app.copy</attribute>
+                <attribute name="accel">&lt;Primary&gt;C</attribute>
             </item>
             <item>
-                <attribute name="label">_Quit</attribute>
-                <attribute name="action">app.quit</attribute>
+                <attribute name="label">Paste</attribute>
+                <attribute name="action">app.paste</attribute>
+                <attribute name="accel">&lt;Primary&gt;V</attribute>
             </item>
-        </section>
-    </menu>
+        </submenu>
 
-    <!-- Define the Help submenu -->
-    <menu id="help-menu">
-        <section>
+        <submenu>
+            <attribute name="label">View</attribute>
             <item>
-                <attribute name="label">_About</attribute>
+                <attribute name="label">Reload</attribute>
+                <attribute name="action">app.reload</attribute>
+                <attribute name="accel">&lt;Primary&gt;R</attribute>
+            </item>
+            <item>
+                <attribute name="label">Developer Tools</attribute>
+                <attribute name="action">app.dev_tools</attribute>
+                <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;I</attribute>
+            </item>
+        </submenu>
+
+        <submenu>
+            <attribute name="label">Tools</attribute>
+
+            <section>
+                <item>
+                    <attribute name="label">Downloads</attribute>
+                    <attribute name="action">app.downloads</attribute>
+                    <attribute name="accel">&lt;Primary&gt;J</attribute>
+                </item>
+                <item>
+                    <attribute name="label">Bookmarks</attribute>
+                    <attribute name="action">app.bookmarks</attribute>
+                    <attribute name="accel">&lt;Primary&gt;B</attribute>
+                </item>
+                <item>
+                    <attribute name="label">History</attribute>
+                    <attribute name="action">app.history</attribute>
+                    <attribute name="accel">&lt;Primary&gt;H</attribute>
+                </item>
+            </section>
+
+            <section>
+                <item>
+                    <attribute name="label">Toggle dark mode</attribute>
+                    <attribute name="action">app.toggle_darkmode</attribute>
+                    <attribute name="checkmark">true</attribute>
+                </item>
+            </section>
+
+            <section>
+                <item>
+                    <attribute name="label">Page Info</attribute>
+                    <attribute name="action">app.page_info</attribute>
+                </item>
+                <item>
+                    <attribute name="label">View source</attribute>
+                    <attribute name="action">app.view_source</attribute>
+                    <attribute name="accel">&lt;Primary&gt;U</attribute>
+                </item>
+            </section>
+
+            <section>
+                <item>
+                    <attribute name="label">Settings</attribute>
+                    <attribute name="action">app.about</attribute>
+                    <attribute name="accel">&lt;Primary&gt;A</attribute>
+                </item>
+            </section>
+
+        </submenu>
+
+        <submenu>
+            <attribute name="label">Help</attribute>
+            <item>
+                <attribute name="label">Getting Help</attribute>
+                <attribute name="action">app.help</attribute>
+                <attribute name="accel">F1</attribute>
+            </item>
+            <item>
+                <attribute name="label">About Gosub</attribute>
                 <attribute name="action">app.about</attribute>
+                <attribute name="accel">&lt;Primary&gt;A</attribute>
             </item>
-        </section>
+        </submenu>
     </menu>
 </interface>
