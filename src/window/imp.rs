@@ -3,7 +3,8 @@ use std::rc::Rc;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Box, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Orientation};
+use gtk::{glib, Entry, Box, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Orientation, Label, Image, Picture};
+use gtk::gdk_pixbuf::Pixbuf;
 use crate::tab::GosubTab;
 use crate::toggle_dark_mode;
 
@@ -116,32 +117,24 @@ impl BrowserWindow {
     }
 
     fn add_tab(&self) {
-        // Each tab is an HBox containing the tab name button and close button
-        let tab = Box::new(Orientation::Horizontal, 0);
-        tab.set_homogeneous(true);
-
-        // Tab button (clickable to select the tab)
-        let tab_button = Button::with_label("Tab");
-        tab_button.connect_clicked(|_| {
-            println!("Tab clicked");
-        });
-
-        // Close button (inside each tab to remove it)
-        let close_button = Button::with_label("X");
-        {
-            let tab_clone = tab.clone();
-            close_button.connect_clicked(move |_| {
-                if let Some(parent) = tab_clone.parent() {
-                    if let Some(container) = parent.downcast_ref::<gtk::Box>() {
-                        container.remove(&tab_clone);
-                    }
-                }
-            });
-        }
+        let tab_favicon = Image::from_resource("/io/gosub/browser-gtk/assets/gosub.svg");
+        // tab_favicon.set_size_request(16, 16);
+        tab_favicon.set_hexpand(false);
+        tab_favicon.set_vexpand(false);
+        tab_favicon.set_margin_bottom(16);
+        tab_favicon.set_margin_end(0);
+        tab_favicon.set_margin_start(0);
+        tab_favicon.set_margin_top(16);
+        let tab_label = Label::new("Gosub.io".into());
+        let tab_close = Image::from_icon_name("window-close-symbolic");
 
         // Pack the tab and close button together
-        tab.append(&tab_button);
-        tab.append(&close_button);
+        let tab = Box::new(Orientation::Horizontal, 0);
+        tab.set_opacity(0.5);
+        tab.set_homogeneous(true);
+        tab.append(&tab_favicon);
+        tab.append(&tab_label);
+        tab.append(&tab_close);
 
         self.tab_bar.get().prepend(&tab);
         self.tab_bar.get().show();
