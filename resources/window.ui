@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
     <template class="BrowserWindow" parent="GtkApplicationWindow">
-        <property name="default-width">1024</property>
-        <property name="default-height">800</property>
-        <property name="resizable">True</property>
         <property name="title">Gosub UserAgent - Browser - v0.0.1</property>
 
         <child type="titlebar">
@@ -104,88 +101,6 @@
                     </object>
                 </child>
                 <child>
-                    <object class="GtkBox" id="tab_bar">
-                        <property name="orientation">horizontal</property>
-                        <property name="hexpand">True</property>
-                        <child>
-                            <object class="GtkButton" id="tab_add">
-                                <signal name="clicked" handler="handle_tab_add_clicked" swapped="true"/>
-                                <property name="margin-top">12</property>
-                                <property name="margin-bottom">12</property>
-                                <property name="margin-start">4</property>
-                                <property name="margin-end">4</property>
-                                <child>
-                                    <object class="GtkImage">
-                                        <property name="icon-name">list-add-symbolic</property>
-                                    </object>
-                                </child>
-                            </object>
-                        </child>
-                    </object>
-                </child>
-
-                <child>
-                    <object class="GtkNotebook" id="notebook">
-                        <!-- First Tab -->
-                        <child>
-                            <object class="GtkLabel" id="notebook-content-1">
-                                <property name="label">Content for first tab</property>
-                            </object>
-                        </child>
-                        <child type="tab">
-                            <object class="GtkBox" id="notebook-tab-1">
-                                <property name="orientation">horizontal</property>
-                                <property name="spacing">0</property>
-                                <child>
-                                    <object class="GtkImage">
-                                        <property name="paintable">resource:///io/gosub/browser-gtk/assets/gosub.svg</property>
-                                    </object>
-                                </child>
-                                <child>
-                                    <object class="GtkLabel">
-                                        <property name="label">gosub.io</property>
-                                    </object>
-                                </child>
-                                <child>
-                                    <object class="GtkImage">
-                                        <property name="icon-name">window-close-symbolic</property>
-                                    </object>
-                                </child>
-                            </object>
-                        </child>
-
-                        <!-- Second Tab -->
-                        <child>
-                            <object class="GtkLabel" id="notebook-content-2">
-                                <property name="label">Content for second tab</property>
-                            </object>
-                        </child>
-                        <child type="tab">
-                            <object class="GtkBox" id="notebook-tab-2">
-                                <property name="orientation">horizontal</property>
-                                <property name="spacing">0</property>
-                                <child>
-                                    <object class="GtkImage">
-                                        <property name="paintable">resource:///io/gosub/browser-gtk/assets/gosub.svg</property>
-                                    </object>
-                                </child>
-                                <child>
-                                    <object class="GtkLabel">
-                                        <property name="label">gosub.io</property>
-                                    </object>
-                                </child>
-                                <child>
-                                    <object class="GtkImage">
-                                        <property name="icon-name">window-close-symbolic</property>
-                                    </object>
-                                </child>
-                            </object>
-                        </child>
-
-                    </object>
-                </child>
-
-                <child>
                     <object class="GtkBox">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
@@ -201,7 +116,6 @@
                                 <property name="valign">end</property>
                                 <property name="margin-top">64</property>
                                 <property name="pixel-size">500</property>
-<!--                                <property name="icon-name">submarine.svg</property>-->
                                 <property name="paintable">resource:///io/gosub/browser-gtk/assets/submarine.svg</property>
                             </object>
                         </child>

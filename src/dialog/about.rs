@@ -2,9 +2,11 @@ use gtk::gdk::Texture;
 use gtk::gdk_pixbuf::Pixbuf;
 use gtk::traits::GtkWindowExt;
 
+#[allow(unused)]
 pub struct About;
 
 impl About {
+    #[allow(unused)]
     pub fn new() -> gtk::AboutDialog {
         let about = gtk::AboutDialog::new();
         about.set_program_name("Gosub Browser".into());

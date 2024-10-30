@@ -3,8 +3,7 @@ use std::rc::Rc;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Box, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Orientation, Label, Image, Picture};
-use gtk::gdk_pixbuf::Pixbuf;
+use gtk::{glib, Entry, Box, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Orientation, Label, Image};
 use crate::tab::GosubTab;
 use crate::toggle_dark_mode;
 
@@ -14,10 +13,6 @@ pub struct BrowserWindow {
     #[template_child]
     pub searchbar: TemplateChild<Entry>,
     #[template_child]
-    pub tab_bar: TemplateChild<Box>,
-    #[template_child]
-    pub tab_add: TemplateChild<Button>,
-    #[template_child]
     pub statusbar: TemplateChild<Statusbar>,
     #[template_child]
     pub log: TemplateChild<TextView>,
@@ -26,6 +21,7 @@ pub struct BrowserWindow {
 }
 
 impl BrowserWindow {
+    #[allow(unused)]
     pub(crate) fn init_tabs(&self) {
         let mut tabs = Vec::new();
         tabs.push(GosubTab::new("https://duckduckgo.com"));
@@ -136,7 +132,7 @@ impl BrowserWindow {
         tab.append(&tab_label);
         tab.append(&tab_close);
 
-        self.tab_bar.get().prepend(&tab);
-        self.tab_bar.get().show();
+        // self.tab_bar.get().prepend(&tab);
+        // self.tab_bar.get().show();
     }
 }

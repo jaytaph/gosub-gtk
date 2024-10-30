@@ -1,8 +1,9 @@
 mod imp;
 
-use gtk::glib;
+use gtk::{glib, ApplicationWindow};
 use gtk::gio;
 use gtk::Application;
+use gtk::subclass::prelude::ObjectSubclassIsExt;
 use gtk::traits::GtkWindowExt;
 
 glib::wrapper! {
@@ -17,8 +18,7 @@ impl BrowserWindow {
         let window: Self = glib::Object::builder().property("application", app)
             .build();
 
-        window.set_default_size(1000, 850);
-        // window.imp().init_tabs();
+        window.imp().init_tabs();
 
         window
     }
