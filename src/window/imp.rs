@@ -1,10 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::Duration;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, gdk_pixbuf, Image};
-use gtk::gdk_pixbuf::Pixbuf;
+use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, Image};
+use gtk::gdk_pixbuf::{Colorspace, Pixbuf};
+use reqwest::blocking::Client;
 use crate::tab::GosubTab;
 use crate::{add_new_tab, toggle_dark_mode};
 
@@ -31,12 +33,11 @@ impl BrowserWindow {
         let initial_tabs = [
             "https://duckduckgo.com",
             "https://news.ycombinator.com",
-            "https://www.reddit.com",
-            "https://www.gosub.io",
+            "https://reddit.com",
+            "https://gosub.io",
         ];
 
         for url in initial_tabs.iter() {
-
             // Load the favicon from the website
             let icon = download_favicon(url);
             let gt = GosubTab::new(url, icon);
@@ -49,33 +50,33 @@ impl BrowserWindow {
 }
 
 fn download_favicon(url: &str) -> Option<Image> {
-    println!("downloading favicon for {}", url);
-    let Ok(body) = reqwest::blocking::get(format!("{}{}", url, "/favicon.ico")) else {
-        println!("Failed to download favicon (response)");
-        return None
-    };
+    let client = Client::builder()
+        .user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0")
+        .timeout(Duration::from_secs(5))
+        .build().ok()?;
 
-    let Ok(buf) = body.bytes() else {
-        println!("Failed to download favicon (body)");
-        return None;
-    };
+    let response = client.get(format!("{}{}", url, "/favicon.ico")).send().ok()?;
+    let buf = response.bytes().ok()?;
 
     let Ok(img) = image::load_from_memory(&buf) else {
-        println!("Failed to download favicon (image)");
+        println!("Failed to load favicon into buffer (image)");
         return None;
     };
 
+    // Convert to RGBA format if not already
     let rgba_image = img.to_rgba8();
-    let width = rgba_image.width() as i32;
-    let height = rgba_image.height() as i32;
+    let (width, height) = rgba_image.dimensions();
+    let pixels = rgba_image.into_raw();
+
+    // Create a Pixbuf from the raw RGBA data
     let pixbuf = Pixbuf::from_mut_slice(
-        rgba_image.into_raw(),
-        gdk_pixbuf::Colorspace::Rgb,
-        true,
-        8,
-        width,
-        height,
-        width * 4
+        pixels,
+        Colorspace::Rgb,
+        true, // Has alpha channel
+        8,    // Bits per channel
+        width as i32,
+        height as i32,
+        width as i32 * 4,
     );
 
     Some(Image::from_pixbuf(Some(&pixbuf)))
