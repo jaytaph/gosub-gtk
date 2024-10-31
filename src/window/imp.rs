@@ -3,15 +3,17 @@ use std::rc::Rc;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Box, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Orientation, Label, Image};
+use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook};
 use crate::tab::GosubTab;
-use crate::toggle_dark_mode;
+use crate::{add_new_tab, toggle_dark_mode};
 
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/io/gosub/browser-gtk/ui/window.ui")]
 pub struct BrowserWindow {
     #[template_child]
     pub searchbar: TemplateChild<Entry>,
+    #[template_child]
+    pub tab_bar: TemplateChild<Notebook>,
     #[template_child]
     pub statusbar: TemplateChild<Statusbar>,
     #[template_child]
@@ -31,11 +33,6 @@ impl BrowserWindow {
         tabs.push(GosubTab::new("https://www.reddit.com"));
         tabs.push(GosubTab::new("https://www.gosub.io"));
         self.tabs.replace(tabs);
-    }
-
-    fn log_stuff(&self) {
-        let len = self.tabs.borrow().len();
-        self.log(format!("There are {} tabs available", len).as_str());
     }
 }
 
@@ -74,16 +71,22 @@ impl ApplicationWindowImpl for BrowserWindow {}
 impl BrowserWindow {
 
     #[template_callback]
+    fn handle_new_tab(&self, _btn: &Button) {
+        self.log("Opening a new tab");
+        self.statusbar.push(1, "We want to open a new tab");
+
+        add_new_tab(self.tab_bar.clone(), GosubTab::new("gosub:blank"));
+    }
+
+    #[template_callback]
     fn handle_close_tab(&self, _btn: &Button) {
         self.log("Closing the current tab");
-        self.log_stuff();
         self.statusbar.push(1, "We want to close the current tab");
     }
 
     #[template_callback]
     fn handle_prev_clicked(&self, _btn: &Button) {
         self.log("Going back to the previous page");
-        self.log_stuff();
         self.statusbar.push(1, "We want to view the previous page");
     }
 
@@ -106,11 +109,11 @@ impl BrowserWindow {
         self.statusbar.push(1, format!("Oh yeah.. full speed ahead to {}", entry.text().as_str()).as_str());
     }
 
-    #[template_callback]
-    fn handle_tab_add_clicked(&self) {
-        self.log("Adding new tab");
-        self.add_tab();
-    }
+    // #[template_callback]
+    // fn handle_tab_add_clicked(&self) {
+    //     self.log("Adding new tab");
+    //     self.add_tab();
+    // }
 }
 
 
@@ -120,29 +123,5 @@ impl BrowserWindow {
         let buf = self.log.buffer();
         let mut iter = buf.end_iter();
         buf.insert(&mut iter, format!("[{}] {}\n", chrono::Local::now().format("%X"), message).as_str());
-    }
-
-    fn add_tab(&self) {
-        let tab_favicon = Image::from_resource("/io/gosub/browser-gtk/assets/gosub.svg");
-        // tab_favicon.set_size_request(16, 16);
-        tab_favicon.set_hexpand(false);
-        tab_favicon.set_vexpand(false);
-        tab_favicon.set_margin_bottom(16);
-        tab_favicon.set_margin_end(0);
-        tab_favicon.set_margin_start(0);
-        tab_favicon.set_margin_top(16);
-        let tab_label = Label::new("Gosub.io".into());
-        let tab_close = Image::from_icon_name("window-close-symbolic");
-
-        // Pack the tab and close button together
-        let tab = Box::new(Orientation::Horizontal, 0);
-        tab.set_opacity(0.5);
-        tab.set_homogeneous(true);
-        tab.append(&tab_favicon);
-        tab.append(&tab_label);
-        tab.append(&tab_close);
-
-        // self.tab_bar.get().prepend(&tab);
-        // self.tab_bar.get().show();
     }
 }

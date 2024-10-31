@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct GosubTab {
     /// Tab is sticky and cannot be moved from the leftmost position
     pub is_sticky: bool,
@@ -13,10 +14,8 @@ pub struct GosubTab {
     pub name: String,
     /// Loaded favicon of the tab
     pub favicon: gtk::Image,
-    /// Textbuffer holds the text of the tab (this is the page rendered later)
+    /// Text buffer holds the text of the tab (this is the page rendered later)
     pub buffer: gtk::TextBuffer,
-    /// Button of the tab
-    pub button: gtk::Button,
 }
 
 impl GosubTab {
@@ -30,7 +29,6 @@ impl GosubTab {
             name: url.to_string(),
             favicon: gtk::Image::new(),
             buffer: gtk::TextBuffer::new(None),
-            button: gtk::Button::new(),
         }
     }
 }
