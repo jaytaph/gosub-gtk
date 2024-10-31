@@ -1,10 +1,9 @@
-mod imp;
+use gtk::glib;
 
-use gtk::{glib, ApplicationWindow};
+mod imp;
 use gtk::gio;
 use gtk::Application;
 use gtk::subclass::prelude::ObjectSubclassIsExt;
-use gtk::traits::GtkWindowExt;
 
 glib::wrapper! {
     pub struct BrowserWindow(ObjectSubclass<imp::BrowserWindow>)

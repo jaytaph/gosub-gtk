@@ -2,11 +2,12 @@ mod window;
 mod tab;
 mod dialog;
 
-use gtk::{Button, Label, Stack, StackSwitcher, StackTransitionType};
+use gtk::{Button, IconPaintable, Label, Picture, Stack, StackSwitcher, StackTransitionType};
 use gtk::prelude::*;
 use gtk::prelude::{ButtonExt};
 use gtk::{gio, glib, Application, CssProvider};
 use gtk::gdk::Display;
+use gtk::gio::Icon;
 use gtk::glib::clone;
 use crate::window::BrowserWindow;
 
@@ -59,15 +60,12 @@ fn build_ui(app: &Application) {
 
     // Tabs
     let stack = Stack::new();
-    stack.set_transition_type(StackTransitionType::SlideLeftRight);
-    stack.set_transition_duration(500);
+    // stack.set_transition_type(StackTransitionType::SlideLeftRight);
+    stack.set_transition_type(StackTransitionType::Crossfade);
+    stack.set_transition_duration(100);
 
     let stack_switcher = StackSwitcher::new();
     stack_switcher.set_stack(Some(&stack));
-
-    let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    vbox.append(&stack_switcher);
-    vbox.append(&stack);
 
     let add_page = |stack: &Stack, title: &str| {
         let page_content = gtk::Box::new(gtk::Orientation::Vertical, 10);
@@ -77,6 +75,36 @@ fn build_ui(app: &Application) {
         page_content.append(&label);
         page_content.append(&button);
 
+        let tab = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        let tab_label = Label::new(Some(title));
+        let tab_close = Picture::new();
+        tab_close.icon(Some("window-close-symbolic"));
+        tab_close.set_halign(gtk::Align::End);
+        tab_close.set_valign(gtk::Align::Center);
+        tab_close.set_margin_start(4);
+        tab_close.set_margin_end(4);
+        tab_close.set_margin_top(4);
+        tab_close.set_margin_bottom(4);
+        tab_close.set_has_tooltip(true);
+        tab_close.set_tooltip_text(Some("Close tab"));
+        tab_close.connect_clicked(clone!(@weak stack => move |_| {
+            let current_page = stack.visible_child().unwrap();
+            stack.remove(&current_page);
+        }));
+        let tab_favicon = Picture::new();
+        tab_favicon.set_icon_name(Some("application-x-executable-symbolic"));
+        tab_favicon.set_halign(gtk::Align::Start);
+        tab_favicon.set_valign(gtk::Align::Center);
+        tab_favicon.set_margin_start(4);
+        tab_favicon.set_margin_end(4);
+        tab_favicon.set_margin_top(4);
+        tab_favicon.set_margin_bottom(4);
+        tab.append(&tab_favicon);
+        tab.append(&tab_label);
+        tab.append(&tab_close);
+
+        stack.add_child(&tab);
+
         let page = stack.add_titled(&page_content, Some(title), title);
         page.set_title(title);
         page
@@ -85,8 +113,17 @@ fn build_ui(app: &Application) {
     add_page(&stack, "First tab");
     add_page(&stack, "Second tab");
 
-    let add_button = Button::with_label("+");
-    add_button.connect_clicked(clone!(@weak stack => move |_| {
+
+
+    let add_tab_button = Button::builder()
+        .icon_name("list-add-symbolic")
+        .has_frame(false)
+        .has_tooltip(true)
+        .tooltip_text("Add a new tab")
+        .build();
+
+    add_tab_button.set_property("has_frame", false);
+    add_tab_button.connect_clicked(clone!(@weak stack => move |_| {
         let tab_count = stack.pages().n_items();
         let new_tab_title = format!("Tab {}", tab_count + 1);
         add_page(&stack, &new_tab_title);
@@ -94,12 +131,35 @@ fn build_ui(app: &Application) {
         stack.set_visible_child_name(&new_tab_title);
     }));
 
-    vbox.append(&add_button);
+    let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+
+    hbox.append(&stack_switcher);
+    hbox.append(&add_tab_button);
+
+    vbox.append(&hbox);
+    vbox.append(&stack);
+
     window.set_child(Some(&vbox));
 
+    // let button = Button::with_label("+");
+    // let page = stack.add_named(&button, Some("+"));
+    // page.set_title("+");
+
+
+    // let add_button = Button::with_label("+");
+    // add_button.connect_clicked(clone!(@weak stack => move |_| {
+    //     let tab_count = stack.pages().n_items();
+    //     let new_tab_title = format!("Tab {}", tab_count + 1);
+    //     add_page(&stack, &new_tab_title);
+    //
+    //     stack.set_visible_child_name(&new_tab_title);
+    // }));
+
+    // vbox.append(&add_button);
+
+    window.set_child(Some(&vbox));
     window.present();
-    window.set_resizable(true);
-    window.set_decorated(true);
 }
 
 fn toggle_dark_mode() {
