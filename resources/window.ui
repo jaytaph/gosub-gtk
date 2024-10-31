@@ -9,17 +9,14 @@
             </object>
         </child>
 
-        <!-- insert menu here -->
+    <!-- main menu here -->
 
         <child>
             <object class="GtkBox">
                 <property name="orientation">vertical</property>
                 <property name="margin-top">12</property>
-                <property name="margin-bottom">12</property>
-                <property name="margin-start">12</property>
-                <property name="margin-end">12</property>
-                <property name="spacing">2</property>
                 <child>
+    <!-- url bar -->
                     <object class="GtkBox">
                         <property name="orientation">horizontal</property>
                         <child>
@@ -67,8 +64,6 @@
                                 <property name="hexpand">True</property>
                             </object>
                         </child>
-
-
                         <child>
                             <object class="GtkToggleButton">
                                 <signal name="clicked" handler="handle_toggle_darkmode" swapped="true"/>
@@ -97,38 +92,94 @@
                                 </child>
                             </object>
                         </child>
-
                     </object>
                 </child>
                 <child>
-                    <object class="GtkBox">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="halign">center</property>
-                        <property name="orientation">vertical</property>
-                        <property name="vexpand">True</property>
-                        <property name="hexpand">True</property>
+    <!-- tab bar -->
+                    <object class="GtkNotebook" id="notebook">
+                        <property name="margin-top">12</property>
+    <!-- First Tab -->
                         <child>
-                            <object class="GtkImage">
-                                <property name="name">gosub-embossed-logo</property>
+                            <object class="GtkBox" id="notebook-content-1">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
-                                <property name="valign">end</property>
-                                <property name="margin-top">64</property>
-                                <property name="pixel-size">500</property>
-                                <property name="paintable">resource:///io/gosub/browser-gtk/assets/submarine.svg</property>
+                                <property name="halign">center</property>
+                                <property name="orientation">vertical</property>
+                                <property name="vexpand">True</property>
+                                <property name="hexpand">True</property>
+                                <child>
+                                    <object class="GtkImage">
+                                        <property name="name">gosub-embossed-logo</property>
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="valign">end</property>
+                                        <property name="margin-top">64</property>
+                                        <property name="pixel-size">500</property>
+                                        <property name="paintable">resource:///io/gosub/browser-gtk/assets/submarine.svg</property>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+                        <child type="tab">
+                            <object class="GtkBox" id="notebook-tab-1">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">5</property>
+                                <child>
+                                    <object class="GtkImage">
+                                        <property name="file">./favicon.ico</property>
+                                    </object>
+                                </child>
+                                <child>
+                                    <object class="GtkLabel">
+                                        <property name="label">gosub:blank</property>
+                                    </object>
+                                </child>
+                                <child>
+                                    <object class="GtkButton">
+                                        <property name="has-frame">false</property>
+                                        <property name="margin-top">0</property>
+                                        <property name="margin-end">0</property>
+                                        <property name="margin-start">0</property>
+                                        <property name="margin-bottom">0</property>
+
+                                        <signal name="clicked" handler="handle_close_tab" swapped="true"/>
+                                        <child>
+                                            <object class="GtkImage">
+                                                <property name="icon-name">window-close-symbolic</property>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+
+                        <child type="action-end">
+                            <object class="GtkButton">
+                                <property name="has-frame">false</property>
+                                <property name="margin-top">0</property>
+                                <property name="margin-end">0</property>
+                                <property name="margin-start">0</property>
+                                <property name="margin-bottom">0</property>
+                                <child>
+                                    <object class="GtkImage">
+                                        <property name="icon-name">list-add-symbolic</property>
+                                    </object>
+                                </child>
                             </object>
                         </child>
                     </object>
                 </child>
+    <!-- log screen -->
                 <child>
                     <object class="GtkTextView" id="log">
                         <property name="vexpand">True</property>
                         <property name="monospace">True</property>
                         <property name="editable">False</property>
+                        <property name="height-request">100</property>
                     </object>
                 </child>
                 <child>
+    <!-- status bar -->
                     <object class="GtkStatusbar" id="statusbar">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>

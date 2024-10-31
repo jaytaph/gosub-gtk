@@ -23,6 +23,8 @@ pub struct BrowserWindow {
 impl BrowserWindow {
     #[allow(unused)]
     pub(crate) fn init_tabs(&self) {
+        /// These tabs are internal to the browser window, they are not in any way connected to
+        /// actual UI tabs.
         let mut tabs = Vec::new();
         tabs.push(GosubTab::new("https://duckduckgo.com"));
         tabs.push(GosubTab::new("https://news.ycombinator.com"));
@@ -70,6 +72,14 @@ impl ApplicationWindowImpl for BrowserWindow {}
 
 #[gtk::template_callbacks]
 impl BrowserWindow {
+
+    #[template_callback]
+    fn handle_close_tab(&self, _btn: &Button) {
+        self.log("Closing the current tab");
+        self.log_stuff();
+        self.statusbar.push(1, "We want to close the current tab");
+    }
+
     #[template_callback]
     fn handle_prev_clicked(&self, _btn: &Button) {
         self.log("Going back to the previous page");

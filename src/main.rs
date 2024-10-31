@@ -2,12 +2,11 @@ mod window;
 mod tab;
 mod dialog;
 
-use gtk::{Button, IconPaintable, Label, Picture, Stack, StackSwitcher, StackTransitionType};
+use gtk::{Button, Stack, StackSwitcher, StackTransitionType};
 use gtk::prelude::*;
 use gtk::prelude::{ButtonExt};
 use gtk::{gio, glib, Application, CssProvider};
 use gtk::gdk::Display;
-use gtk::gio::Icon;
 use gtk::glib::clone;
 use crate::window::BrowserWindow;
 
@@ -56,7 +55,7 @@ fn build_ui(app: &Application) {
         toggle_dark_mode();
     });
     app.add_action(&action);
-
+    
 
     // Tabs
     let stack = Stack::new();
@@ -68,42 +67,51 @@ fn build_ui(app: &Application) {
     stack_switcher.set_stack(Some(&stack));
 
     let add_page = |stack: &Stack, title: &str| {
+
+        // let viewport = gtk::Viewport::new(None, None);
+        let scrolled_window = gtk::ScrolledWindow::new();
+        scrolled_window.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
+        // scrolled_window.set_child(Some(&viewport));
+
         let page_content = gtk::Box::new(gtk::Orientation::Vertical, 10);
+        page_content.append(&scrolled_window);
 
-        let label = Label::new(Some(&format!("This is the {}", title)));
-        let button = Button::with_label("Button on tab");
-        page_content.append(&label);
-        page_content.append(&button);
+        // let label = Label::new(Some(&format!("This is the {}", title)));
+        // let button = Button::with_label("Button on tab");
+        // page_content.append(&label);
+        // page_content.append(&button);
 
-        let tab = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        let tab_label = Label::new(Some(title));
-        let tab_close = Picture::new();
-        tab_close.icon(Some("window-close-symbolic"));
-        tab_close.set_halign(gtk::Align::End);
-        tab_close.set_valign(gtk::Align::Center);
-        tab_close.set_margin_start(4);
-        tab_close.set_margin_end(4);
-        tab_close.set_margin_top(4);
-        tab_close.set_margin_bottom(4);
-        tab_close.set_has_tooltip(true);
-        tab_close.set_tooltip_text(Some("Close tab"));
-        tab_close.connect_clicked(clone!(@weak stack => move |_| {
-            let current_page = stack.visible_child().unwrap();
-            stack.remove(&current_page);
-        }));
-        let tab_favicon = Picture::new();
-        tab_favicon.set_icon_name(Some("application-x-executable-symbolic"));
-        tab_favicon.set_halign(gtk::Align::Start);
-        tab_favicon.set_valign(gtk::Align::Center);
-        tab_favicon.set_margin_start(4);
-        tab_favicon.set_margin_end(4);
-        tab_favicon.set_margin_top(4);
-        tab_favicon.set_margin_bottom(4);
-        tab.append(&tab_favicon);
-        tab.append(&tab_label);
-        tab.append(&tab_close);
+        // let tab_label = Label::new(Some(title));
+        //
+        // let tab_close = Button::from_icon_name("window-close-symbolic");
+        // tab_close.set_property("has_frame", false);
+        // tab_close.set_halign(gtk::Align::End);
+        // tab_close.set_valign(gtk::Align::Center);
+        // tab_close.set_margin_start(4);
+        // tab_close.set_margin_end(4);
+        // tab_close.set_margin_top(4);
+        // tab_close.set_margin_bottom(4);
+        // tab_close.set_has_tooltip(true);
+        // tab_close.set_tooltip_text(Some("Close tab"));
+        // tab_close.connect_clicked(clone!(@weak stack => move |_| {
+        //     let current_page = stack.visible_child().unwrap();
+        //     stack.remove(&current_page);
+        // }));
+        //
+        // let tab_favicon = Image::from_resource("/io/gosub/browser-gtk/assets/gosub.svg");
+        // tab_favicon.set_halign(gtk::Align::Start);
+        // tab_favicon.set_valign(gtk::Align::Center);
+        // tab_favicon.set_margin_start(4);
+        // tab_favicon.set_margin_end(4);
+        // tab_favicon.set_margin_top(4);
+        // tab_favicon.set_margin_bottom(4);
+        //
+        // let tab = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        // tab.append(&tab_favicon);
+        // tab.append(&tab_label);
+        // tab.append(&tab_close);
 
-        stack.add_child(&tab);
+        // stack.add_child(&tab);
 
         let page = stack.add_titled(&page_content, Some(title), title);
         page.set_title(title);
@@ -112,8 +120,6 @@ fn build_ui(app: &Application) {
 
     add_page(&stack, "First tab");
     add_page(&stack, "Second tab");
-
-
 
     let add_tab_button = Button::builder()
         .icon_name("list-add-symbolic")
@@ -140,7 +146,8 @@ fn build_ui(app: &Application) {
     vbox.append(&hbox);
     vbox.append(&stack);
 
-    window.set_child(Some(&vbox));
+
+    // window.set_child(Some(&vbox));
 
     // let button = Button::with_label("+");
     // let page = stack.add_named(&button, Some("+"));
@@ -158,7 +165,7 @@ fn build_ui(app: &Application) {
 
     // vbox.append(&add_button);
 
-    window.set_child(Some(&vbox));
+    // window.set_child(Some(&vbox));
     window.present();
 }
 
