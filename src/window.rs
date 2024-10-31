@@ -6,10 +6,9 @@ use gtk::Application;
 use gtk::gio::SimpleAction;
 use gtk::prelude::GtkWindowExt;
 use gtk::subclass::prelude::ObjectSubclassIsExt;
-use crate::{show_about_dialog, toggle_dark_mode};
 use crate::GosubTab;
-use crate::add_new_tab;
 use gtk::prelude::*;
+use crate::tab::add_new_tab;
 
 // This wrapper must be in a different module than the implementation, because both will define a
 // `struct BrowserWindow` and they would clash. In this case, the browser window is a subclass of
@@ -36,18 +35,24 @@ impl BrowserWindow {
 
         // Dark mode toggle
         let action = SimpleAction::new_stateful("toggle_darkmode", None, &false.to_variant());
-        action.connect_activate(move |action, _| {
-            let is_dark_mode = action.state().unwrap().get::<bool>().unwrap();
-            action.set_state(&(!is_dark_mode).to_variant());
+        action.connect_activate({
+            let window_clone = window.clone();
+            move |action, _| {
+                let is_dark_mode = action.state().unwrap().get::<bool>().unwrap();
+                action.set_state(&(!is_dark_mode).to_variant());
 
-            toggle_dark_mode();
+                window_clone.imp().toggle_dark_mode();
+            }
         });
         app.add_action(&action);
 
         // About action
         let about_action = SimpleAction::new("about", None);
-        about_action.connect_activate(move |_, _| {
-            show_about_dialog();
+        about_action.connect_activate({
+            let window_clone = window.clone();
+            move |_, _| {
+                window_clone.imp().show_about_dialog();
+            }
         });
         app.add_action(&about_action);
         app.set_accels_for_action("app.about", &["<Primary>A"]);

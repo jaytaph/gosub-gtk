@@ -1,14 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, Image};
-use gtk::gdk_pixbuf::{Colorspace, Pixbuf};
-use reqwest::blocking::Client;
-use crate::tab::GosubTab;
-use crate::{add_new_tab, toggle_dark_mode};
+use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook};
+use crate::tab::{add_new_tab, update_current_tab, GosubTab};
+use crate::dialog::about::About;
+use crate::favicon::download_favicon;
 
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/io/gosub/browser-gtk/ui/window.ui")]
@@ -49,38 +47,12 @@ impl BrowserWindow {
     }
 }
 
-fn download_favicon(url: &str) -> Option<Image> {
-    let client = Client::builder()
-        .user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0")
-        .timeout(Duration::from_secs(5))
-        .build().ok()?;
 
-    let response = client.get(format!("{}{}", url, "/favicon.ico")).send().ok()?;
-    let buf = response.bytes().ok()?;
+// let notebook_clone = tab_bar.clone();
+// tab_btn.connect_clicked(move |_| {
+//     notebook_clone.remove_page(Some(page_index));
+// });
 
-    let Ok(img) = image::load_from_memory(&buf) else {
-        println!("Failed to load favicon into buffer (image)");
-        return None;
-    };
-
-    // Convert to RGBA format if not already
-    let rgba_image = img.to_rgba8();
-    let (width, height) = rgba_image.dimensions();
-    let pixels = rgba_image.into_raw();
-
-    // Create a Pixbuf from the raw RGBA data
-    let pixbuf = Pixbuf::from_mut_slice(
-        pixels,
-        Colorspace::Rgb,
-        true, // Has alpha channel
-        8,    // Bits per channel
-        width as i32,
-        height as i32,
-        width as i32 * 4,
-    );
-
-    Some(Image::from_pixbuf(Some(&pixbuf)))
-}
 
 #[glib::object_subclass]
 impl ObjectSubclass for BrowserWindow {
@@ -141,7 +113,7 @@ impl BrowserWindow {
     #[template_callback]
     fn handle_toggle_darkmode(&self, _btn: &ToggleButton) {
         self.log("Toggling dark mode");
-        toggle_dark_mode();
+        self.toggle_dark_mode();
         self.statusbar.push(1, "We want to toggle dark mode");
     }
 
@@ -153,8 +125,16 @@ impl BrowserWindow {
 
     #[template_callback]
     fn handle_searchbar_clicked(&self, entry: &Entry) {
+        self.log(format!("We are currently on tab: {}", self.tab_bar.current_page().unwrap()).as_str());
         self.log(format!("Visiting the URL {}", entry.text().as_str()).as_str());
         self.statusbar.push(1, format!("Oh yeah.. full speed ahead to {}", entry.text().as_str()).as_str());
+
+        let binding = entry.text();
+        let url = binding.as_str();
+        let icon = download_favicon(url);
+        let tab = GosubTab::new(url, icon);
+
+        update_current_tab(self.tab_bar.clone(), tab);
     }
 
     // #[template_callback]
@@ -172,4 +152,19 @@ impl BrowserWindow {
         let mut iter = buf.end_iter();
         buf.insert(&mut iter, format!("[{}] {}\n", chrono::Local::now().format("%X"), message).as_str());
     }
+
+
+    pub(crate) fn show_about_dialog(&self) {
+        let about = About::new();
+        about.show();
+    }
+
+    pub(crate) fn toggle_dark_mode(&self) {
+        if let Some(settings) = gtk::Settings::default() {
+            let is_dark = settings.is_gtk_application_prefer_dark_theme();
+            settings.set_gtk_application_prefer_dark_theme(!is_dark);
+        }
+    }
+
+
 }

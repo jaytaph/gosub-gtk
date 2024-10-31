@@ -60,6 +60,7 @@
                             <object class="GtkEntry" id="searchbar">
                                 <signal name="activate" handler="handle_searchbar_clicked" swapped="true"/>
                                 <property name="placeholder-text" translatable="yes">about:gosub</property>
+                                <property name="primary-icon-name">channel-secure</property>
                                 <property name="secondary-icon-name">edit-find</property>
                                 <property name="hexpand">True</property>
                             </object>
@@ -98,6 +99,7 @@
     <!-- tab bar -->
                     <object class="GtkNotebook" id="tab_bar">
                         <property name="margin-top">12</property>
+                        <property name="scrollable">true</property>
     <!-- First Tab -->
 <!--                        <child>-->
 <!--                            <object class="GtkBox" id="notebook-content-1">-->
