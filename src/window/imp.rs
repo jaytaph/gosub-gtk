@@ -3,7 +3,8 @@ use std::rc::Rc;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook};
+use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, gdk_pixbuf, Image};
+use gtk::gdk_pixbuf::Pixbuf;
 use crate::tab::GosubTab;
 use crate::{add_new_tab, toggle_dark_mode};
 
@@ -25,15 +26,59 @@ pub struct BrowserWindow {
 impl BrowserWindow {
     #[allow(unused)]
     pub(crate) fn init_tabs(&self) {
-        /// These tabs are internal to the browser window, they are not in any way connected to
-        /// actual UI tabs.
         let mut tabs = Vec::new();
-        tabs.push(GosubTab::new("https://duckduckgo.com"));
-        tabs.push(GosubTab::new("https://news.ycombinator.com"));
-        tabs.push(GosubTab::new("https://www.reddit.com"));
-        tabs.push(GosubTab::new("https://www.gosub.io"));
+
+        let initial_tabs = [
+            "https://duckduckgo.com",
+            "https://news.ycombinator.com",
+            "https://www.reddit.com",
+            "https://www.gosub.io",
+        ];
+
+        for url in initial_tabs.iter() {
+
+            // Load the favicon from the website
+            let icon = download_favicon(url);
+            let gt = GosubTab::new(url, icon);
+            tabs.push(gt.clone());
+            add_new_tab(self.tab_bar.clone(), gt.clone());
+        }
+
         self.tabs.replace(tabs);
     }
+}
+
+fn download_favicon(url: &str) -> Option<Image> {
+    println!("downloading favicon for {}", url);
+    let Ok(body) = reqwest::blocking::get(format!("{}{}", url, "/favicon.ico")) else {
+        println!("Failed to download favicon (response)");
+        return None
+    };
+
+    let Ok(buf) = body.bytes() else {
+        println!("Failed to download favicon (body)");
+        return None;
+    };
+
+    let Ok(img) = image::load_from_memory(&buf) else {
+        println!("Failed to download favicon (image)");
+        return None;
+    };
+
+    let rgba_image = img.to_rgba8();
+    let width = rgba_image.width() as i32;
+    let height = rgba_image.height() as i32;
+    let pixbuf = Pixbuf::from_mut_slice(
+        rgba_image.into_raw(),
+        gdk_pixbuf::Colorspace::Rgb,
+        true,
+        8,
+        width,
+        height,
+        width * 4
+    );
+
+    Some(Image::from_pixbuf(Some(&pixbuf)))
 }
 
 #[glib::object_subclass]
@@ -56,6 +101,8 @@ impl ObjectImpl for BrowserWindow {
     fn constructed(&self) {
         self.parent_constructed();
 
+        self.log("Browser created...");
+
         // Initialize the status bar
         self.statusbar.push(1, "Ready to roll...");
     }
@@ -75,7 +122,7 @@ impl BrowserWindow {
         self.log("Opening a new tab");
         self.statusbar.push(1, "We want to open a new tab");
 
-        add_new_tab(self.tab_bar.clone(), GosubTab::new("gosub:blank"));
+        add_new_tab(self.tab_bar.clone(), GosubTab::new("gosub:blank", None));
     }
 
     #[template_callback]

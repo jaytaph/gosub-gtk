@@ -38,7 +38,7 @@ fn build_ui(app: &Application) {
     window.present();
 }
 
-fn add_new_tab(tab_bar: Notebook, _tab_data: GosubTab) {
+fn add_new_tab(tab_bar: Notebook, tab_data: GosubTab) {
     // Tab content
     let img = gtk::Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
     img.set_visible(true);
@@ -56,8 +56,14 @@ fn add_new_tab(tab_bar: Notebook, _tab_data: GosubTab) {
     content_vbox.append(&img);
 
     // Tab label
-    let tab_img = gtk::Image::from_file("./favicon.ico");
-    let tab_label = gtk::Label::new("gosub:blank".into());
+    let label_vbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+
+    if let Some(favicon) = tab_data.favicon {
+        label_vbox.append(&favicon);
+    }
+    let tab_label = gtk::Label::new(Some(tab_data.name.as_str()));
+    label_vbox.append(&tab_label);
+
     let tab_btn = gtk::Button::builder()
         .has_frame(false)
         .margin_bottom(0)
@@ -65,16 +71,17 @@ fn add_new_tab(tab_bar: Notebook, _tab_data: GosubTab) {
         .margin_start(0)
         .margin_top(0)
         .build();
-    tab_btn.set_action_name(Some("app.tab.close"));
+    // tab_btn.set_action_name(Some("app.tab.close"));
     let img = gtk::Image::from_icon_name("window-close-symbolic");
     tab_btn.set_child(Some(&img));
-
-    let label_vbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-    label_vbox.append(&tab_img);
-    label_vbox.append(&tab_label);
     label_vbox.append(&tab_btn);
 
-    tab_bar.append_page(&content_vbox, Some(&label_vbox));
+    let page_index = tab_bar.append_page(&content_vbox, Some(&label_vbox));
+
+    let notebook_clone = tab_bar.clone();
+    tab_btn.connect_clicked(move |_| {
+        notebook_clone.remove_page(Some(page_index));
+    });
 }
 
 fn show_about_dialog() {

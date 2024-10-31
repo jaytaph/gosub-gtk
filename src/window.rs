@@ -52,12 +52,13 @@ impl BrowserWindow {
         app.add_action(&about_action);
         app.set_accels_for_action("app.about", &["<Primary>A"]);
 
+        // Create new tab
         let new_tab_action = SimpleAction::new("tab.new", None);
         new_tab_action.connect_activate({
             let tab_bar = window.imp().tab_bar.clone();
             let tabs = window.imp().tabs.clone();
             move |_, _| {
-                let tab_data = GosubTab::new("https://duckduckgo.com");
+                let tab_data = GosubTab::new("https://duckduckgo.com", None);
                 tabs.borrow_mut().push(tab_data.clone());
                 add_new_tab(tab_bar.clone(), tab_data);
             }
@@ -65,20 +66,10 @@ impl BrowserWindow {
         app.add_action(&new_tab_action);
         app.set_accels_for_action("app.tab.new", &["<Primary>T"]);
 
-        let new_tab_action = SimpleAction::new("tab.close", None);
-        new_tab_action.connect_activate({
-            let tab_bar = window.imp().tab_bar.clone();
-            let tabs = window.imp().tabs.clone();
-            move |_,_| {
-            }
-        });
-        app.add_action(&new_tab_action);
-
         // Custom stuff we need to do after the window has been created
         window.imp().init_tabs();
 
         window
     }
 }
-
 

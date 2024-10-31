@@ -1,3 +1,5 @@
+use gtk::Image;
+
 #[derive(Clone)]
 pub struct GosubTab {
     /// Tab is sticky and cannot be moved from the leftmost position
@@ -13,13 +15,13 @@ pub struct GosubTab {
     /// Name of the tab / title to display
     pub name: String,
     /// Loaded favicon of the tab
-    pub favicon: gtk::Image,
+    pub favicon: Option<Image>,
     /// Text buffer holds the text of the tab (this is the page rendered later)
     pub buffer: gtk::TextBuffer,
 }
 
 impl GosubTab {
-    pub fn new(url: &str) -> Self {
+    pub fn new(url: &str, favicon: Option<Image>) -> Self {
         GosubTab {
             is_sticky: false,
             is_private: false,
@@ -27,7 +29,7 @@ impl GosubTab {
             is_loading: false,
             url: url.to_string(),
             name: url.to_string(),
-            favicon: gtk::Image::new(),
+            favicon,
             buffer: gtk::TextBuffer::new(None),
         }
     }
