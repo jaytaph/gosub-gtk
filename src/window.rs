@@ -98,7 +98,6 @@ impl BrowserWindow {
             }
         });
 
-
         // Custom stuff we need to do after the window has been created
         window.imp().init_tabs();
 
