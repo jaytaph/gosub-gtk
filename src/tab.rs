@@ -1,133 +1,236 @@
-use gtk::{Image, Notebook, Widget};
-use gtk::glib::Cast;
-use gtk::prelude::{BoxExt, ButtonExt, WidgetExt};
+use gtk::{Image};
+use gtk::prelude::{BoxExt, ButtonExt};
 
 #[derive(Clone)]
 pub struct GosubTab {
+    /// Id of the tab
+    id: uuid::Uuid,
+    /// True when the tab is dirty and needs redrawing in the gtknotebook
+    dirty: bool,
     /// Tab is sticky and cannot be moved from the leftmost position
-    pub is_sticky: bool,
+    sticky: bool,
     /// Tab content is private and not saved in history
-    pub is_private: bool,
+    private: bool,
     /// Tab is currently active
-    pub is_active: bool,
+    active: bool,
     /// Tab is currently loading
-    pub is_loading: bool,
+    loading: bool,
     /// URL that is loaded into the tab
-    pub url: String,
+    url: String,
+    /// History of the tab
+    history: Vec<String>,
     /// Name of the tab / title to display
-    pub name: String,
+    name: String,
     /// Loaded favicon of the tab
-    pub favicon: Option<Image>,
-    /// Text buffer holds the text of the tab (this is the page rendered later)
-    pub buffer: gtk::TextBuffer,
-
-    // The number of the page in the notebook, if it is added
-    pub page_index: Option<u32>,
+    favicon: Option<Image>,
+    // Text buffer holds the text of the tab (this is the page rendered later)
+    // buffer: gtk::TextBuffer,
 }
 
 impl GosubTab {
     pub fn new(url: &str, favicon: Option<Image>) -> Self {
         GosubTab {
-            is_sticky: false,
-            is_private: false,
-            is_active: false,
-            is_loading: false,
+            id: uuid::Uuid::new_v4(),
+            dirty: true,
+            sticky: false,
+            private: false,
+            active: false,
+            loading: false,
             url: url.to_string(),
+            history: Vec::new(),
             name: url.to_string(),
             favicon,
-            buffer: gtk::TextBuffer::new(None),
-            page_index: None,
+            // buffer: gtk::TextBuffer::new(None),
         }
     }
 
-    pub fn set_page_index(&mut self, index: u32) {
-        self.page_index = Some(index);
+    pub fn id(&self) -> uuid::Uuid {
+        self.id
+    }
+
+    pub fn mark_as_dirty(&mut self) {
+        self.dirty = true;
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+
+    pub fn set_sticky(&mut self, sticky: bool) {
+        self.sticky = sticky;
+    }
+
+    pub fn is_sticky(&self) -> bool {
+        self.sticky
+    }
+
+    pub fn set_private(&mut self, private: bool) {
+        self.private = private;
+    }
+
+    pub fn set_active(&mut self, active: bool) {
+        self.active = active;
+    }
+
+    pub fn set_loading(&mut self, loading: bool) {
+        self.loading = loading;
+    }
+
+    pub fn set_url(&mut self, url: &str) {
+        self.url = url.to_string();
+    }
+
+    pub fn add_to_history(&mut self, url: &str) {
+        self.history.push(url.to_string());
+    }
+
+    pub fn pop_history(&mut self) -> Option<String> {
+        self.history.pop()
+    }
+
+    pub fn set_name(&mut self, name: &str) {
+        self.name = name.to_string();
+    }
+
+    pub fn set_favicon(&mut self, favicon: Option<Image>) {
+        self.favicon = favicon;
+    }
+
+    // pub fn set_page_index(&mut self, index: u32) {
+    //     self.page_index = Some(index);
+    // }
+}
+
+pub struct GosubTabManager {
+    tabs: Vec<GosubTab>,
+    active_tab: Option<usize>,
+}
+
+impl Default for GosubTabManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl GosubTabManager {
+    pub fn new() -> Self {
+        GosubTabManager {
+            tabs: Vec::new(),
+            active_tab: None,
+        }
+    }
+
+    pub(crate) fn get_active_tab_mut(&mut self) -> Option<&mut GosubTab> {
+        self.active_tab.and_then(|index| self.tabs.get_mut(index))
+    }
+
+    pub fn set_active(&mut self, index: usize) {
+        self.active_tab = Some(index);
+    }
+
+    pub fn add_tab(&mut self, tab: GosubTab) {
+        self.tabs.push(tab);
+    }
+
+    pub fn remove_tab(&mut self, index: usize) {
+        self.tabs.remove(index);
+    }
+
+    pub fn get_tab(&self, index: usize) -> Option<&GosubTab> {
+        self.tabs.get(index)
+    }
+
+    pub fn get_tab_mut(&mut self, index: usize) -> Option<&mut GosubTab> {
+        self.tabs.get_mut(index)
     }
 }
 
 
-/// Update the tab label with the new tab data
-pub fn update_current_tab(tab_bar: Notebook, tab_data: GosubTab) {
-    if let Some(current_page) = tab_bar.current_page() {
-        let label_vbox = create_label(tab_bar.clone(), tab_data);
-        tab_bar.set_tab_label(&tab_bar.nth_page(Some(current_page)).unwrap(), Some(&label_vbox));
-    }
-}
-
-/// Add a new tab to the tab bar at the end of the list
-pub fn add_new_tab(tab_bar: Notebook, tab_data: &GosubTab) {
-    // Add new tab at the end of the notebook list
-    insert_tab(tab_bar, tab_data, None);
-}
+// /// Update the tab label with the new tab data
+// pub fn update_current_tab(tab_bar: Notebook, tab_data: GosubTab) {
+//     if let Some(current_page) = tab_bar.current_page() {
+//         let label_vbox = create_label(tab_bar.clone(), tab_data);
+//         tab_bar.set_tab_label(&tab_bar.nth_page(Some(current_page)).unwrap(), Some(&label_vbox));
+//     }
+// }
+//
+// /// Add a new tab to the tab bar at the end of the list
+// pub fn add_new_tab(tab_bar: Notebook, tab_data: &GosubTab) {
+//     // Add new tab at the end of the notebook list
+//     insert_tab(tab_bar, tab_data, None);
+// }
 
 // Create a new tab label
-fn create_label(tab_bar: Notebook, tab_data: GosubTab) -> gtk::Box {
-    // Tab label
+fn create_label(tab: &GosubTab) -> gtk::Box {
     let label_vbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
 
-    if let Some(favicon) = tab_data.favicon {
+    // When the tab is loading, we show a spinner
+    if tab.loading {
+        let spinner = gtk::Spinner::new();
+        spinner.start();
+        label_vbox.append(&spinner);
+    } else if let Some(favicon) = tab.favicon.clone() {
         label_vbox.append(&favicon);
     }
-    let tab_label = gtk::Label::new(Some(tab_data.name.as_str()));
-    label_vbox.append(&tab_label);
 
-    let tab_btn = gtk::Button::builder()
-        .has_frame(false)
-        .margin_bottom(0)
-        .margin_end(0)
-        .margin_start(0)
-        .margin_top(0)
-        .build();
-    let img = gtk::Image::from_icon_name("window-close-symbolic");
-    tab_btn.set_child(Some(&img));
-    label_vbox.append(&tab_btn);
+    // Only show the title and close button if the tab is not sticky
+    if ! tab.is_sticky() {
+        let tab_label = gtk::Label::new(Some(tab.name.as_str()));
+        label_vbox.append(&tab_label);
 
-    // Connect the close button to remove the tab
-    let notebook_clone = tab_bar.clone();
-    tab_btn.connect_clicked(
-        // let tab_data_clone = tab_data.clone();
-        move |btn| {
-            println!("Clicked close button");
-            if let Some(page_index) = tab_data_clone.page_index {
-                notebook_clone.remove_page(Some(page_index));
-                tab_data.page_index = None;
+        let tab_btn = gtk::Button::builder()
+            .has_frame(false)
+            .margin_bottom(0)
+            .margin_end(0)
+            .margin_start(0)
+            .margin_top(0)
+            .build();
+        let img = gtk::Image::from_icon_name("window-close-symbolic");
+        tab_btn.set_child(Some(&img));
+
+        let tab_clone = tab.clone();
+        tab_btn.connect_clicked(
+            move |_| {
+                println!("Clicked close button for tab {}", tab_clone.id);
             }
-        }
-    });
+        );
+
+        label_vbox.append(&tab_btn);
+    }
 
     label_vbox
 }
 
-pub fn insert_tab(tab_bar: Notebook, tab_data: &GosubTab, position: Option<u32>) {
-    // Tab content
-    let img = gtk::Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
-    img.set_visible(true);
-    img.set_can_focus(false);
-    img.set_valign(gtk::Align::End);
-    img.set_margin_top(64);
-    img.set_pixel_size(500);
-
-    let content_vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    content_vbox.set_visible(true);
-    content_vbox.set_can_focus(false);
-    content_vbox.set_halign(gtk::Align::Center);
-    content_vbox.set_vexpand(true);
-    content_vbox.set_hexpand(true);
-    content_vbox.append(&img);
-
-    let label_vbox = create_label(tab_bar.clone(), tab_data);
-
-    let page_index = match position {
-        Some(pos) => {
-            tab_bar.insert_page(&content_vbox, Some(&label_vbox), Some(pos))
-        }
-        None => {
-            tab_bar.append_page(&content_vbox, Some(&label_vbox))
-        }
-    };
-    tab_data.page_index = page_index;
-
-    // tab_bar.nth_page(page_index).unwrap().set &content_vbox, Some(&label_vbox));
-
-    // let page_index = tab_bar.append_page(&content_vbox, Some(&label_vbox));
-}
+// pub fn insert_tab(tab_bar: Notebook, tab_data: &GosubTab, position: Option<u32>) {
+//     // Tab content
+//     let img = gtk::Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
+//     img.set_visible(true);
+//     img.set_can_focus(false);
+//     img.set_valign(gtk::Align::End);
+//     img.set_margin_top(64);
+//     img.set_pixel_size(500);
+//
+//     let content_vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+//     content_vbox.set_visible(true);
+//     content_vbox.set_can_focus(false);
+//     content_vbox.set_halign(gtk::Align::Center);
+//     content_vbox.set_vexpand(true);
+//     content_vbox.set_hexpand(true);
+//     content_vbox.append(&img);
+//
+//     let label_vbox = create_label(tab_bar.clone(), tab_data);
+//
+//     let page_index = match position {
+//         Some(pos) => {
+//             tab_bar.insert_page(&content_vbox, Some(&label_vbox), Some(pos))
+//         }
+//         None => {
+//             tab_bar.append_page(&content_vbox, Some(&label_vbox))
+//         }
+//     };
+//     tab_data.page_index = page_index;
+//
+//     // tab_bar.nth_page(page_index).unwrap().set &content_vbox, Some(&label_vbox));
+//
+//     // let page_index = tab_bar.append_page(&content_vbox, Some(&label_vbox));
+// }

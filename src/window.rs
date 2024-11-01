@@ -6,9 +6,7 @@ use gtk::Application;
 use gtk::gio::SimpleAction;
 use gtk::prelude::GtkWindowExt;
 use gtk::subclass::prelude::ObjectSubclassIsExt;
-use crate::GosubTab;
 use gtk::prelude::*;
-use crate::tab::add_new_tab;
 
 // This wrapper must be in a different module than the implementation, because both will define a
 // `struct BrowserWindow` and they would clash. In this case, the browser window is a subclass of
@@ -57,19 +55,19 @@ impl BrowserWindow {
         app.add_action(&about_action);
         app.set_accels_for_action("app.about", &["<Primary>A"]);
 
-        // Create new tab
-        let new_tab_action = SimpleAction::new("tab.new", None);
-        new_tab_action.connect_activate({
-            let tab_bar = window.imp().tab_bar.clone();
-            let tabs = window.imp().tabs.clone();
-            move |_, _| {
-                let tab_data = GosubTab::new("https://duckduckgo.com", None);
-                tabs.borrow_mut().push(tab_data.clone());
-                add_new_tab(tab_bar.clone(), tab_data);
-            }
-        });
-        app.add_action(&new_tab_action);
-        app.set_accels_for_action("app.tab.new", &["<Primary>T"]);
+        // // Create new tab
+        // let new_tab_action = SimpleAction::new("tab.new", None);
+        // new_tab_action.connect_activate({
+        //     let tab_bar = window.imp().tab_bar.clone();
+        //     let tabs = window.imp().tabs.clone();
+        //     move |_, _| {
+        //         let tab_data = GosubTab::new("https://duckduckgo.com", None);
+        //         tabs.borrow_mut().push(tab_data.clone());
+        //         add_new_tab(tab_bar.clone(), tab_data);
+        //     }
+        // });
+        // app.add_action(&new_tab_action);
+        // app.set_accels_for_action("app.tab.new", &["<Primary>T"]);
 
         // Custom stuff we need to do after the window has been created
         window.imp().init_tabs();

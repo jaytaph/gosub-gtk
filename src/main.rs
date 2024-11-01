@@ -6,7 +6,6 @@ mod favicon;
 use gtk::prelude::*;
 use gtk::{gio, glib, Application, CssProvider};
 use gtk::gdk::Display;
-use crate::tab::GosubTab;
 use crate::window::BrowserWindow;
 
 const APP_ID: &str = "io.gosub.browser-gtk";

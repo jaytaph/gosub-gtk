@@ -4,7 +4,7 @@ use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook};
-use crate::tab::{add_new_tab, update_current_tab, GosubTab};
+use crate::tab::{GosubTab, GosubTabManager};
 use crate::dialog::about::About;
 use crate::favicon::download_favicon;
 
@@ -19,15 +19,13 @@ pub struct BrowserWindow {
     pub statusbar: TemplateChild<Statusbar>,
     #[template_child]
     pub log: TemplateChild<TextView>,
-    /// Actual tabs information
-    pub tabs: Rc<RefCell<Vec<GosubTab>>>,
+
+    pub tab_manager: Rc<RefCell<GosubTabManager>>,
 }
 
 impl BrowserWindow {
     #[allow(unused)]
     pub(crate) fn init_tabs(&self) {
-        let mut tabs = Vec::new();
-
         let initial_tabs = [
             "https://duckduckgo.com",
             "https://news.ycombinator.com",
@@ -36,14 +34,11 @@ impl BrowserWindow {
         ];
 
         for url in initial_tabs.iter() {
-            // Load the favicon from the website
             let icon = download_favicon(url);
-            let gt = GosubTab::new(url, icon);
-            tabs.push(gt.clone());
-            add_new_tab(self.tab_bar.clone(), gt.clone());
+            self.tab_manager.borrow_mut().add_tab(GosubTab::new(url, icon));
         }
 
-        self.tabs.replace(tabs);
+        // self.tabs.replace(tabs);
     }
 }
 
@@ -95,7 +90,7 @@ impl BrowserWindow {
         self.log("Opening a new tab");
         self.statusbar.push(1, "We want to open a new tab");
 
-        add_new_tab(self.tab_bar.clone(), GosubTab::new("gosub:blank", None));
+        self.tab_manager.borrow_mut().add_tab(GosubTab::new("gosub:blank", None));
     }
 
     #[template_callback]
@@ -125,16 +120,36 @@ impl BrowserWindow {
 
     #[template_callback]
     fn handle_searchbar_clicked(&self, entry: &Entry) {
-        self.log(format!("We are currently on tab: {}", self.tab_bar.current_page().unwrap()).as_str());
+        let Some(page) = self.tab_bar.current_page() else {
+            let mut tab = GosubTab::new(entry.text().as_str(), None);
+            tab.set_loading(true);
+            self.tab_manager.borrow_mut().add_tab(tab);
+
+            self.refresh_tabs();
+            return
+        };
+
+        self.log(format!("We are currently on tab: {}", page).as_str());
         self.log(format!("Visiting the URL {}", entry.text().as_str()).as_str());
         self.statusbar.push(1, format!("Oh yeah.. full speed ahead to {}", entry.text().as_str()).as_str());
 
         let binding = entry.text();
         let url = binding.as_str();
         let icon = download_favicon(url);
-        let tab = GosubTab::new(url, icon);
 
-        update_current_tab(self.tab_bar.clone(), tab);
+        let mut manager = self.tab_manager.borrow_mut();
+        let Some(tab) = manager.get_active_tab_mut() else {
+            self.log("No tab selected, cannot navigate to URL");
+            return
+        };
+
+        tab.set_url(url);
+        tab.set_favicon(icon);
+        tab.mark_as_dirty();
+
+        self.refresh_tabs();
+
+        // update_current_tab(self.tab_bar.clone(), tab);
     }
 
     // #[template_callback]
@@ -163,6 +178,16 @@ impl BrowserWindow {
         if let Some(settings) = gtk::Settings::default() {
             let is_dark = settings.is_gtk_application_prefer_dark_theme();
             settings.set_gtk_application_prefer_dark_theme(!is_dark);
+        }
+    }
+
+    pub(crate) fn refresh_tabs(&self) {
+        let manager = self.tab_manager.borrow();
+        let tabs = manager.tabs();
+
+        for (index, tab) in tabs.iter().enumerate() {
+            let label = create_label(tab);
+            self.tab_bar.set_tab_label_text(self.tab_bar.nth_page(Some(index)).unwrap(), tab.url());
         }
     }
 
