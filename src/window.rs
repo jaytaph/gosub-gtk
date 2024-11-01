@@ -69,6 +69,36 @@ impl BrowserWindow {
         // app.add_action(&new_tab_action);
         // app.set_accels_for_action("app.tab.new", &["<Primary>T"]);
 
+        let tab_bar = window.imp().tab_bar.clone();
+        tab_bar.connect_page_added({
+            let window_clone = window.clone();
+            move |_notebook, _, page_num| {
+                window_clone.imp().log(format!("added tab: {}", page_num).as_str());
+            }
+        });
+
+        tab_bar.connect_page_removed({
+            let window_clone = window.clone();
+            move |_notebook, _, page_num| {
+                window_clone.imp().log(format!("removed tab: {}", page_num).as_str());
+            }
+        });
+
+        tab_bar.connect_page_reordered({
+            let window_clone = window.clone();
+            move |_notebook, _, page_num| {
+                window_clone.imp().log(format!("reordered tab: {}", page_num).as_str());
+            }
+        });
+
+        tab_bar.connect_switch_page({
+            let window_clone = window.clone();
+            move |_notebook, _, page_num| {
+                window_clone.imp().log(format!("switched to tab: {}", page_num).as_str());
+            }
+        });
+
+
         // Custom stuff we need to do after the window has been created
         window.imp().init_tabs();
 

@@ -1,12 +1,12 @@
+use std::collections::HashMap;
 use gtk::{Image};
 use gtk::prelude::{BoxExt, ButtonExt};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct GosubTab {
     /// Id of the tab
     id: uuid::Uuid,
-    /// True when the tab is dirty and needs redrawing in the gtknotebook
-    dirty: bool,
     /// Tab is sticky and cannot be moved from the leftmost position
     sticky: bool,
     /// Tab content is private and not saved in history
@@ -31,7 +31,6 @@ impl GosubTab {
     pub fn new(url: &str, favicon: Option<Image>) -> Self {
         GosubTab {
             id: uuid::Uuid::new_v4(),
-            dirty: true,
             sticky: false,
             private: false,
             active: false,
@@ -46,14 +45,6 @@ impl GosubTab {
 
     pub fn id(&self) -> uuid::Uuid {
         self.id
-    }
-
-    pub fn mark_as_dirty(&mut self) {
-        self.dirty = true;
-    }
-
-    pub fn is_dirty(&self) -> bool {
-        self.dirty
     }
 
     pub fn set_sticky(&mut self, sticky: bool) {
@@ -102,8 +93,14 @@ impl GosubTab {
 }
 
 pub struct GosubTabManager {
-    tabs: Vec<GosubTab>,
-    active_tab: Option<usize>,
+    // All known tabs in the system
+    tabs: HashMap<Uuid, GosubTab>,
+    // Currently active tab, if any
+    active_tab: Option<Uuid>,
+    // Any tabs that need repainting because they might be changed
+    dirty_tabs: Vec<Uuid>,
+    // Actual ordering of the tabs in the notebook
+    ordering: Vec<Uuid>,
 }
 
 impl Default for GosubTabManager {
@@ -115,33 +112,57 @@ impl Default for GosubTabManager {
 impl GosubTabManager {
     pub fn new() -> Self {
         GosubTabManager {
-            tabs: Vec::new(),
+            tabs: HashMap::new(),
             active_tab: None,
+            dirty_tabs: Vec::new(),
+            ordering: Vec::new(),
         }
     }
 
+    pub(crate) fn clear_dirty(&mut self) {
+        self.dirty_tabs.clear();
+    }
+
+    pub(crate) fn dirty_tabs(&self) -> Vec<Uuid> {
+        self.dirty_tabs.clone()
+    }
+
     pub(crate) fn get_active_tab_mut(&mut self) -> Option<&mut GosubTab> {
-        self.active_tab.and_then(|index| self.tabs.get_mut(index))
+        self.tabs.get_mut(&self.active_tab?)
     }
 
-    pub fn set_active(&mut self, index: usize) {
-        self.active_tab = Some(index);
+    pub fn set_active(&mut self, tab_id: Uuid) {
+        self.active_tab = Some(tab_id);
     }
 
-    pub fn add_tab(&mut self, tab: GosubTab) {
-        self.tabs.push(tab);
+    pub fn add_tab(&mut self, tab: GosubTab, position: Option<usize>) {
+        if let Some(pos) = position {
+            self.ordering.insert(pos, tab.id);
+        } else {
+            self.ordering.push(tab.id);
+        }
+
+        self.tabs.insert(tab.id, tab);
     }
 
-    pub fn remove_tab(&mut self, index: usize) {
-        self.tabs.remove(index);
+    pub fn remove_tab(&mut self, tab_id: Uuid) {
+        if let Some(index) = self.ordering.iter().position(|id| id == &tab_id) {
+            self.ordering.remove(index);
+        }
+
+        self.tabs.remove(&tab_id);
     }
 
-    pub fn get_tab(&self, index: usize) -> Option<&GosubTab> {
-        self.tabs.get(index)
+    pub fn get_tab(&self, tab_id: Uuid) -> Option<&GosubTab> {
+        self.tabs.get(&tab_id)
     }
 
-    pub fn get_tab_mut(&mut self, index: usize) -> Option<&mut GosubTab> {
-        self.tabs.get_mut(index)
+    pub fn get_tab_mut(&mut self, tab_id: Uuid) -> Option<&mut GosubTab> {
+        self.tabs.get_mut(&tab_id)
+    }
+
+    pub fn order(&self) -> Vec<Uuid> {
+        self.ordering.clone()
     }
 }
 
@@ -161,7 +182,7 @@ impl GosubTabManager {
 // }
 
 // Create a new tab label
-fn create_label(tab: &GosubTab) -> gtk::Box {
+pub fn create_label(tab: &GosubTab) -> gtk::Box {
     let label_vbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
 
     // When the tab is loading, we show a spinner
