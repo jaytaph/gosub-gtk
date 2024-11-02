@@ -10,7 +10,7 @@ TODO Gui specific stuff:
 - [ ] change title of window based on the title of the tab
 - [ ] implement url history (per tab)
 - [ ] implement scroller for logging window
-- [ ] show/hide logging window with F1 (or some key)
+- [X] show/hide logging window with CTRL-L
 
 TODO Gosub engine implementation (assumes async eventloop is implemented in gosub engine):
 - [ ] Make sure we can use vello in a window for drawing

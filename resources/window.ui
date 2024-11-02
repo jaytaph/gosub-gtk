@@ -119,6 +119,7 @@
     <!-- log screen -->
                 <child>
                     <object class="GtkTextView" id="log">
+                        <property name="visible">False</property>
                         <property name="vexpand">True</property>
                         <property name="monospace">True</property>
                         <property name="editable">False</property>

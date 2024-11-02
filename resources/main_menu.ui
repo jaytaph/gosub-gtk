@@ -98,6 +98,14 @@
 
             <section>
                 <item>
+                    <attribute name="label">Toggle logging window</attribute>
+                    <attribute name="action">app.log.toggle</attribute>
+                    <attribute name="accel">&lt;Primary&gt;L</attribute>
+                </item>
+            </section>
+
+            <section>
+                <item>
                     <attribute name="label">Page Info</attribute>
                     <attribute name="action">app.page_info</attribute>
                 </item>
