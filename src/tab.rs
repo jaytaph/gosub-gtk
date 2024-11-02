@@ -98,6 +98,7 @@ pub struct GosubTabManager {
     // Currently active tab, if any
     active_tab: Option<Uuid>,
     // Any tabs that need repainting because they might be changed
+    #[allow(dead_code)]
     dirty_tabs: Vec<Uuid>,
     // Actual ordering of the tabs in the notebook
     ordering: Vec<Uuid>,
@@ -119,10 +120,12 @@ impl GosubTabManager {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn clear_dirty(&mut self) {
         self.dirty_tabs.clear();
     }
 
+    #[allow(dead_code)]
     pub(crate) fn dirty_tabs(&self) -> Vec<Uuid> {
         self.dirty_tabs.clone()
     }

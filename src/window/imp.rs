@@ -18,6 +18,8 @@ pub struct BrowserWindow {
     #[template_child]
     pub statusbar: TemplateChild<Statusbar>,
     #[template_child]
+    pub log_scroller: TemplateChild<gtk::ScrolledWindow>,
+    #[template_child]
     pub log: TemplateChild<TextView>,
 
     pub tab_manager: Rc<RefCell<GosubTabManager>>,
@@ -41,13 +43,6 @@ impl BrowserWindow {
         self.refresh_tabs();
     }
 }
-
-
-// let notebook_clone = tab_bar.clone();
-// tab_btn.connect_clicked(move |_| {
-//     notebook_clone.remove_page(Some(page_index));
-// });
-
 
 #[glib::object_subclass]
 impl ObjectSubclass for BrowserWindow {
@@ -165,8 +160,10 @@ impl BrowserWindow {
         let buf = self.log.buffer();
         let mut iter = buf.end_iter();
         buf.insert(&mut iter, format!("[{}] {}\n", chrono::Local::now().format("%X"), message).as_str());
-    }
 
+        let mark = buf.create_mark(None, &iter, false);
+        self.log.scroll_to_mark(&mark, 0.0, true, 0.0, 1.0);
+    }
 
     pub(crate) fn show_about_dialog(&self) {
         let about = About::new();

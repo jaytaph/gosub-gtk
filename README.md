@@ -9,7 +9,7 @@ TODO Gui specific stuff:
 - [ ] implement tab dragging and sorting
 - [ ] change title of window based on the title of the tab
 - [ ] implement url history (per tab)
-- [ ] implement scroller for logging window
+- [X] implement scroller for logging window
 - [X] show/hide logging window with CTRL-L
 
 TODO Gosub engine implementation (assumes async eventloop is implemented in gosub engine):

@@ -60,11 +60,11 @@ impl BrowserWindow {
         logwindow_action.connect_activate({
             let window_clone = window.clone();
             move |_, _| {
-                window_clone.imp().log.set_visible(!window_clone.imp().log.get_visible());
+                window_clone.imp().log_scroller.set_visible(!window_clone.imp().log_scroller.get_visible());
             }
         });
         app.add_action(&logwindow_action);
-        app.set_accels_for_action("app.logwindow", &["<Primary>L"]);
+        app.set_accels_for_action("app.log.toggle", &["<Primary>L"]);
 
         // // Create new tab
         // let new_tab_action = SimpleAction::new("tab.new", None);
