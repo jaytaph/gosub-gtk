@@ -60,6 +60,7 @@
                             <object class="GtkEntry" id="searchbar">
                                 <signal name="activate" handler="handle_searchbar_clicked" swapped="true"/>
                                 <property name="placeholder-text" translatable="yes">about:gosub</property>
+                                <property name="primary-icon-name">channel-secure</property>
                                 <property name="secondary-icon-name">edit-find</property>
                                 <property name="hexpand">True</property>
                             </object>
@@ -98,61 +99,7 @@
     <!-- tab bar -->
                     <object class="GtkNotebook" id="tab_bar">
                         <property name="margin-top">12</property>
-    <!-- First Tab -->
-<!--                        <child>-->
-<!--                            <object class="GtkBox" id="notebook-content-1">-->
-<!--                                <property name="visible">True</property>-->
-<!--                                <property name="can-focus">False</property>-->
-<!--                                <property name="halign">center</property>-->
-<!--                                <property name="orientation">vertical</property>-->
-<!--                                <property name="vexpand">True</property>-->
-<!--                                <property name="hexpand">True</property>-->
-<!--                                <child>-->
-<!--                                    <object class="GtkImage">-->
-<!--                                        <property name="name">gosub-embossed-logo</property>-->
-<!--                                        <property name="visible">True</property>-->
-<!--                                        <property name="can-focus">False</property>-->
-<!--                                        <property name="valign">end</property>-->
-<!--                                        <property name="margin-top">64</property>-->
-<!--                                        <property name="pixel-size">500</property>-->
-<!--                                        <property name="paintable">resource:///io/gosub/browser-gtk/assets/submarine.svg</property>-->
-<!--                                    </object>-->
-<!--                                </child>-->
-<!--                            </object>-->
-<!--                        </child>-->
-<!--                        <child type="tab">-->
-<!--                            <object class="GtkBox" id="notebook-tab-1">-->
-<!--                                <property name="orientation">horizontal</property>-->
-<!--                                <property name="spacing">5</property>-->
-<!--                                <child>-->
-<!--                                    <object class="GtkImage">-->
-<!--                                        <property name="file">./favicon.ico</property>-->
-<!--                                    </object>-->
-<!--                                </child>-->
-<!--                                <child>-->
-<!--                                    <object class="GtkLabel">-->
-<!--                                        <property name="label">gosub:blank</property>-->
-<!--                                    </object>-->
-<!--                                </child>-->
-<!--                                <child>-->
-<!--                                    <object class="GtkButton">-->
-<!--                                        <property name="has-frame">false</property>-->
-<!--                                        <property name="margin-top">0</property>-->
-<!--                                        <property name="margin-end">0</property>-->
-<!--                                        <property name="margin-start">0</property>-->
-<!--                                        <property name="margin-bottom">0</property>-->
-
-<!--                                        <signal name="clicked" handler="handle_close_tab" swapped="true"/>-->
-<!--                                        <child>-->
-<!--                                            <object class="GtkImage">-->
-<!--                                                <property name="icon-name">window-close-symbolic</property>-->
-<!--                                            </object>-->
-<!--                                        </child>-->
-<!--                                    </object>-->
-<!--                                </child>-->
-<!--                            </object>-->
-<!--                        </child>-->
-
+                        <property name="scrollable">true</property>
                         <child type="action-end">
                             <object class="GtkButton">
                                 <property name="has-frame">false</property>

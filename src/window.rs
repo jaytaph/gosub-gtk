@@ -6,9 +6,6 @@ use gtk::Application;
 use gtk::gio::SimpleAction;
 use gtk::prelude::GtkWindowExt;
 use gtk::subclass::prelude::ObjectSubclassIsExt;
-use crate::{show_about_dialog, toggle_dark_mode};
-use crate::GosubTab;
-use crate::add_new_tab;
 use gtk::prelude::*;
 
 // This wrapper must be in a different module than the implementation, because both will define a
@@ -36,35 +33,70 @@ impl BrowserWindow {
 
         // Dark mode toggle
         let action = SimpleAction::new_stateful("toggle_darkmode", None, &false.to_variant());
-        action.connect_activate(move |action, _| {
-            let is_dark_mode = action.state().unwrap().get::<bool>().unwrap();
-            action.set_state(&(!is_dark_mode).to_variant());
+        action.connect_activate({
+            let window_clone = window.clone();
+            move |action, _| {
+                let is_dark_mode = action.state().unwrap().get::<bool>().unwrap();
+                action.set_state(&(!is_dark_mode).to_variant());
 
-            toggle_dark_mode();
+                window_clone.imp().toggle_dark_mode();
+            }
         });
         app.add_action(&action);
 
         // About action
         let about_action = SimpleAction::new("about", None);
-        about_action.connect_activate(move |_, _| {
-            show_about_dialog();
+        about_action.connect_activate({
+            let window_clone = window.clone();
+            move |_, _| {
+                window_clone.imp().show_about_dialog();
+            }
         });
         app.add_action(&about_action);
         app.set_accels_for_action("app.about", &["<Primary>A"]);
 
-        // Create new tab
-        let new_tab_action = SimpleAction::new("tab.new", None);
-        new_tab_action.connect_activate({
-            let tab_bar = window.imp().tab_bar.clone();
-            let tabs = window.imp().tabs.clone();
-            move |_, _| {
-                let tab_data = GosubTab::new("https://duckduckgo.com", None);
-                tabs.borrow_mut().push(tab_data.clone());
-                add_new_tab(tab_bar.clone(), tab_data);
+        // // Create new tab
+        // let new_tab_action = SimpleAction::new("tab.new", None);
+        // new_tab_action.connect_activate({
+        //     let tab_bar = window.imp().tab_bar.clone();
+        //     let tabs = window.imp().tabs.clone();
+        //     move |_, _| {
+        //         let tab_data = GosubTab::new("https://duckduckgo.com", None);
+        //         tabs.borrow_mut().push(tab_data.clone());
+        //         add_new_tab(tab_bar.clone(), tab_data);
+        //     }
+        // });
+        // app.add_action(&new_tab_action);
+        // app.set_accels_for_action("app.tab.new", &["<Primary>T"]);
+
+        let tab_bar = window.imp().tab_bar.clone();
+        tab_bar.connect_page_added({
+            let window_clone = window.clone();
+            move |_notebook, _, page_num| {
+                window_clone.imp().log(format!("added tab: {}", page_num).as_str());
             }
         });
-        app.add_action(&new_tab_action);
-        app.set_accels_for_action("app.tab.new", &["<Primary>T"]);
+
+        tab_bar.connect_page_removed({
+            let window_clone = window.clone();
+            move |_notebook, _, page_num| {
+                window_clone.imp().log(format!("removed tab: {}", page_num).as_str());
+            }
+        });
+
+        tab_bar.connect_page_reordered({
+            let window_clone = window.clone();
+            move |_notebook, _, page_num| {
+                window_clone.imp().log(format!("reordered tab: {}", page_num).as_str());
+            }
+        });
+
+        tab_bar.connect_switch_page({
+            let window_clone = window.clone();
+            move |_notebook, _, page_num| {
+                window_clone.imp().log(format!("switched to tab: {}", page_num).as_str());
+            }
+        });
 
         // Custom stuff we need to do after the window has been created
         window.imp().init_tabs();

@@ -1,14 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, Image};
-use gtk::gdk_pixbuf::{Colorspace, Pixbuf};
-use reqwest::blocking::Client;
-use crate::tab::GosubTab;
-use crate::{add_new_tab, toggle_dark_mode};
+use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook};
+use crate::tab::{create_label, GosubTab, GosubTabManager};
+use crate::dialog::about::About;
+use crate::favicon::download_favicon;
 
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/io/gosub/browser-gtk/ui/window.ui")]
@@ -21,15 +19,13 @@ pub struct BrowserWindow {
     pub statusbar: TemplateChild<Statusbar>,
     #[template_child]
     pub log: TemplateChild<TextView>,
-    /// Actual tabs information
-    pub tabs: Rc<RefCell<Vec<GosubTab>>>,
+
+    pub tab_manager: Rc<RefCell<GosubTabManager>>,
 }
 
 impl BrowserWindow {
     #[allow(unused)]
     pub(crate) fn init_tabs(&self) {
-        let mut tabs = Vec::new();
-
         let initial_tabs = [
             "https://duckduckgo.com",
             "https://news.ycombinator.com",
@@ -38,49 +34,20 @@ impl BrowserWindow {
         ];
 
         for url in initial_tabs.iter() {
-            // Load the favicon from the website
             let icon = download_favicon(url);
-            let gt = GosubTab::new(url, icon);
-            tabs.push(gt.clone());
-            add_new_tab(self.tab_bar.clone(), gt.clone());
+            self.tab_manager.borrow_mut().add_tab(GosubTab::new(url, icon), None);
         }
 
-        self.tabs.replace(tabs);
+        self.refresh_tabs();
     }
 }
 
-fn download_favicon(url: &str) -> Option<Image> {
-    let client = Client::builder()
-        .user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0")
-        .timeout(Duration::from_secs(5))
-        .build().ok()?;
 
-    let response = client.get(format!("{}{}", url, "/favicon.ico")).send().ok()?;
-    let buf = response.bytes().ok()?;
+// let notebook_clone = tab_bar.clone();
+// tab_btn.connect_clicked(move |_| {
+//     notebook_clone.remove_page(Some(page_index));
+// });
 
-    let Ok(img) = image::load_from_memory(&buf) else {
-        println!("Failed to load favicon into buffer (image)");
-        return None;
-    };
-
-    // Convert to RGBA format if not already
-    let rgba_image = img.to_rgba8();
-    let (width, height) = rgba_image.dimensions();
-    let pixels = rgba_image.into_raw();
-
-    // Create a Pixbuf from the raw RGBA data
-    let pixbuf = Pixbuf::from_mut_slice(
-        pixels,
-        Colorspace::Rgb,
-        true, // Has alpha channel
-        8,    // Bits per channel
-        width as i32,
-        height as i32,
-        width as i32 * 4,
-    );
-
-    Some(Image::from_pixbuf(Some(&pixbuf)))
-}
 
 #[glib::object_subclass]
 impl ObjectSubclass for BrowserWindow {
@@ -123,7 +90,7 @@ impl BrowserWindow {
         self.log("Opening a new tab");
         self.statusbar.push(1, "We want to open a new tab");
 
-        add_new_tab(self.tab_bar.clone(), GosubTab::new("gosub:blank", None));
+        self.tab_manager.borrow_mut().add_tab(GosubTab::new("gosub:blank", None), None);
     }
 
     #[template_callback]
@@ -141,7 +108,7 @@ impl BrowserWindow {
     #[template_callback]
     fn handle_toggle_darkmode(&self, _btn: &ToggleButton) {
         self.log("Toggling dark mode");
-        toggle_dark_mode();
+        self.toggle_dark_mode();
         self.statusbar.push(1, "We want to toggle dark mode");
     }
 
@@ -153,8 +120,35 @@ impl BrowserWindow {
 
     #[template_callback]
     fn handle_searchbar_clicked(&self, entry: &Entry) {
+        let Some(page) = self.tab_bar.current_page() else {
+            let mut tab = GosubTab::new(entry.text().as_str(), None);
+            tab.set_loading(true);
+            self.tab_manager.borrow_mut().add_tab(tab, None);
+
+            self.refresh_tabs();
+            return
+        };
+
+        self.log(format!("We are currently on tab: {}", page).as_str());
         self.log(format!("Visiting the URL {}", entry.text().as_str()).as_str());
         self.statusbar.push(1, format!("Oh yeah.. full speed ahead to {}", entry.text().as_str()).as_str());
+
+        let binding = entry.text();
+        let url = binding.as_str();
+        let icon = download_favicon(url);
+
+        let mut manager = self.tab_manager.borrow_mut();
+        let Some(tab) = manager.get_active_tab_mut() else {
+            self.log("No tab selected, cannot navigate to URL");
+            return
+        };
+
+        tab.set_url(url);
+        tab.set_favicon(icon);
+
+        self.refresh_tabs();
+
+        // update_current_tab(self.tab_bar.clone(), tab);
     }
 
     // #[template_callback]
@@ -167,9 +161,66 @@ impl BrowserWindow {
 
 impl BrowserWindow {
 
-    fn log(&self, message: &str) {
+    pub fn log(&self, message: &str) {
         let buf = self.log.buffer();
         let mut iter = buf.end_iter();
         buf.insert(&mut iter, format!("[{}] {}\n", chrono::Local::now().format("%X"), message).as_str());
     }
+
+
+    pub(crate) fn show_about_dialog(&self) {
+        let about = About::new();
+        about.show();
+    }
+
+    pub(crate) fn toggle_dark_mode(&self) {
+        if let Some(settings) = gtk::Settings::default() {
+            let is_dark = settings.is_gtk_application_prefer_dark_theme();
+            settings.set_gtk_application_prefer_dark_theme(!is_dark);
+        }
+    }
+
+    pub(crate) fn refresh_tabs(&self) {
+        let manager = self.tab_manager.borrow();
+
+        let mut page_num = 0;
+        for tab_id in manager.order() {
+            let tab = manager.get_tab(tab_id).unwrap();
+
+            let label = create_label(tab);
+            if self.tab_bar.pages().n_items() <= page_num {
+                // add new tab
+                let default_page = default_page();
+                self.tab_bar.append_page(&default_page, Some(&label));
+            } else {
+                // update existing tab
+                let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
+                self.tab_bar.set_tab_label(&page_child, Some(&label));
+            }
+
+            page_num += 1;
+        }
+    }
+}
+
+fn default_page() -> gtk::Box {
+    let img = gtk::Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
+    img.set_visible(true);
+    img.set_focusable(false);
+    img.set_valign(gtk::Align::End);
+    img.set_margin_top(64);
+    img.set_pixel_size(500);
+
+
+    let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    vbox.set_visible(true);
+    vbox.set_can_focus(false);
+    vbox.set_halign(gtk::Align::Center);
+    vbox.set_orientation(gtk::Orientation::Vertical);
+    vbox.set_vexpand(true);
+    vbox.set_hexpand(true);
+
+    vbox.append(&img);
+
+    vbox
 }
