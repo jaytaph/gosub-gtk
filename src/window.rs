@@ -7,6 +7,7 @@ use gtk::gio::SimpleAction;
 use gtk::prelude::GtkWindowExt;
 use gtk::subclass::prelude::ObjectSubclassIsExt;
 use gtk::prelude::*;
+use crate::tab::GosubTab;
 
 // This wrapper must be in a different module than the implementation, because both will define a
 // `struct BrowserWindow` and they would clash. In this case, the browser window is a subclass of
@@ -66,19 +67,19 @@ impl BrowserWindow {
         app.add_action(&logwindow_action);
         app.set_accels_for_action("app.log.toggle", &["<Primary>L"]);
 
-        // // Create new tab
-        // let new_tab_action = SimpleAction::new("tab.new", None);
-        // new_tab_action.connect_activate({
-        //     let tab_bar = window.imp().tab_bar.clone();
-        //     let tabs = window.imp().tabs.clone();
-        //     move |_, _| {
-        //         let tab_data = GosubTab::new("https://duckduckgo.com", None);
-        //         tabs.borrow_mut().push(tab_data.clone());
-        //         add_new_tab(tab_bar.clone(), tab_data);
-        //     }
-        // });
-        // app.add_action(&new_tab_action);
-        // app.set_accels_for_action("app.tab.new", &["<Primary>T"]);
+        // Create new tab
+        let new_tab_action = SimpleAction::new("tab.new", None);
+        new_tab_action.connect_activate({
+            let window_clone = window.clone();
+            let tab_manager = window.imp().tab_manager.clone();
+            move |_, _| {
+                let tab_data = GosubTab::new("gosub:blank", None);
+                tab_manager.borrow_mut().add_tab(tab_data, None);
+                window_clone.imp().refresh_tabs();
+            }
+        });
+        app.add_action(&new_tab_action);
+        app.set_accels_for_action("app.tab.new", &["<Primary>T"]);
 
         let tab_bar = window.imp().tab_bar.clone();
         tab_bar.connect_page_added({
@@ -106,6 +107,11 @@ impl BrowserWindow {
             let window_clone = window.clone();
             move |_notebook, _, page_num| {
                 window_clone.imp().log(format!("switched to tab: {}", page_num).as_str());
+                let mgr = window_clone.imp().tab_manager.borrow();
+                let tab_id = mgr.page_to_tab(page_num);
+                if let Some(tab_id) = tab_id {
+                    mgr.set_active(tab_id);
+                }
             }
         });
 

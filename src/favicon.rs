@@ -1,9 +1,8 @@
 use std::time::Duration;
 use gtk::gdk_pixbuf::{Colorspace, Pixbuf};
-use gtk::Image;
 use reqwest::blocking::Client;
 
-pub fn download_favicon(url: &str) -> Option<Image> {
+pub fn download_favicon(url: &str) -> Option<Pixbuf> {
     let client = Client::builder()
         .user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0")
         .timeout(Duration::from_secs(5))
@@ -33,5 +32,5 @@ pub fn download_favicon(url: &str) -> Option<Image> {
         width as i32 * 4,
     );
 
-    Some(Image::from_pixbuf(Some(&pixbuf)))
+    Some(pixbuf)
 }

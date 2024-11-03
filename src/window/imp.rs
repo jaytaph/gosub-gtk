@@ -3,8 +3,9 @@ use std::rc::Rc;
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook};
-use crate::tab::{create_label, GosubTab, GosubTabManager};
+use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, Image};
+use uuid::Uuid;
+use crate::tab::{GosubTab, GosubTabManager};
 use crate::dialog::about::About;
 use crate::favicon::download_favicon;
 
@@ -142,15 +143,7 @@ impl BrowserWindow {
         tab.set_favicon(icon);
 
         self.refresh_tabs();
-
-        // update_current_tab(self.tab_bar.clone(), tab);
     }
-
-    // #[template_callback]
-    // fn handle_tab_add_clicked(&self) {
-    //     self.log("Adding new tab");
-    //     self.add_tab();
-    // }
 }
 
 
@@ -177,6 +170,12 @@ impl BrowserWindow {
         }
     }
 
+    pub(crate) fn close_tab(&self, tab_id: Uuid) {
+        let mut manager = self.tab_manager.borrow_mut();
+        manager.remove_tab(tab_id);
+        self.refresh_tabs();
+    }
+
     pub(crate) fn refresh_tabs(&self) {
         let manager = self.tab_manager.borrow();
 
@@ -184,7 +183,7 @@ impl BrowserWindow {
         for tab_id in manager.order() {
             let tab = manager.get_tab(tab_id).unwrap();
 
-            let label = create_label(tab);
+            let label = self.create_label(tab);
             if self.tab_bar.pages().n_items() <= page_num {
                 // add new tab
                 let default_page = default_page();
@@ -197,6 +196,48 @@ impl BrowserWindow {
 
             page_num += 1;
         }
+    }
+
+    // Create a new tab label
+    pub fn create_label(&self, tab: &GosubTab) -> gtk::Box {
+        let label_vbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+
+        // When the tab is loading, we show a spinner
+        if tab.is_loading() {
+            let spinner = gtk::Spinner::new();
+            spinner.start();
+            label_vbox.append(&spinner);
+        } else if let Some(favicon) = &tab.favicon() {
+            label_vbox.append(&Image::from_pixbuf(Some(&favicon.clone())));
+        }
+
+        // Only show the title and close button if the tab is not sticky
+        if ! tab.is_sticky() {
+            let tab_label = gtk::Label::new(Some(tab.name()));
+            label_vbox.append(&tab_label);
+
+            let tab_btn = gtk::Button::builder()
+                .has_frame(false)
+                .margin_bottom(0)
+                .margin_end(0)
+                .margin_start(0)
+                .margin_top(0)
+                .build();
+            let img = Image::from_icon_name("window-close-symbolic");
+            tab_btn.set_child(Some(&img));
+
+            let tab_clone = tab.clone();
+            tab_btn.connect_clicked(
+                move |_| {
+                    println!("Clicked close button for tab {}", tab_clone.id());
+                    self.close_tab(tab_clone.id());
+                }
+            );
+
+            label_vbox.append(&tab_btn);
+        }
+
+        label_vbox
     }
 }
 
