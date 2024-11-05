@@ -1,6 +1,6 @@
+use adw::gtk;
 use gtk::gdk::Texture;
 use gtk::gdk_pixbuf::Pixbuf;
-use gtk::traits::GtkWindowExt;
 
 #[allow(unused)]
 pub struct About;
@@ -27,8 +27,6 @@ impl About {
             about.set_logo(Some(&logo_texture));
         }
         about.set_comments(Some("A simple browser written in Rust and GTK"));
-        about.set_modal(true);
-        about.set_destroy_with_parent(true);
 
         about.set_authors(&["Gosub Team", "Joshua Thijssen", "SharkTheOne"]);
         about.add_credit_section("Networking", &[ "Gosub Team" ]);

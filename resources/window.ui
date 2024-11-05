@@ -19,6 +19,9 @@
     <!-- url bar -->
                     <object class="GtkBox">
                         <property name="orientation">horizontal</property>
+                        <property name="spacing">5</property>
+                        <property name="margin-start">12</property>
+                        <property name="margin-end">12</property>
                         <child>
                             <object class="GtkButton" id="btn_prev">
                                 <signal name="clicked" handler="handle_prev_clicked" swapped="true"/>
@@ -70,7 +73,7 @@
                                 <signal name="clicked" handler="handle_toggle_darkmode" swapped="true"/>
                                 <child>
                                     <object class="GtkImage">
-                                        <property name="icon-name">accessories-calculator-symbolic</property>
+                                        <property name="icon-name">weather-clear-symbolic</property>
                                     </object>
                                 </child>
                             </object>
