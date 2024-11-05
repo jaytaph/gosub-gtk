@@ -1,14 +1,12 @@
+use adw::{prelude::*, subclass::prelude::*, ApplicationWindow};
 use adw::gtk;
 use std::cell::RefCell;
 use std::rc::Rc;
 use glib::subclass::InitializingObject;
-use gtk4::prelude::*;
-use gtk4::subclass::prelude::*;
-use gtk4::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, Image};
+use gtk4::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, Image, ScrolledWindow};
 use log::info;
 use uuid::Uuid;
 use crate::tab::{GosubTab, GosubTabManager};
-use crate::dialog::about::About;
 use crate::favicon::download_favicon;
 
 #[derive(CompositeTemplate, Default)]
@@ -21,7 +19,7 @@ pub struct BrowserWindow {
     #[template_child]
     pub statusbar: TemplateChild<Statusbar>,
     #[template_child]
-    pub log_scroller: TemplateChild<gtk4::ScrolledWindow>,
+    pub log_scroller: TemplateChild<ScrolledWindow>,
     #[template_child]
     pub log: TemplateChild<TextView>,
 
@@ -32,9 +30,9 @@ impl BrowserWindow {
     #[allow(unused)]
     pub(crate) fn init_tabs(&self) {
         let initial_tabs = [
-            "https://duckduckgo.com",
-            "https://news.ycombinator.com",
-            "https://reddit.com",
+            // "https://duckduckgo.com",
+            // "https://news.ycombinator.com",
+            // "https://reddit.com",
             "https://gosub.io",
         ];
 
@@ -51,7 +49,7 @@ impl BrowserWindow {
 impl ObjectSubclass for BrowserWindow {
     const NAME: &'static str = "BrowserWindow";
     type Type = super::BrowserWindow;
-    type ParentType = gtk::ApplicationWindow;
+    type ParentType = gtk4::ApplicationWindow;
 
     fn class_init(klass: &mut Self::Class) {
         klass.bind_template();
@@ -75,9 +73,7 @@ impl ObjectImpl for BrowserWindow {
 }
 
 impl WidgetImpl for BrowserWindow {}
-
 impl WindowImpl for BrowserWindow {}
-
 impl ApplicationWindowImpl for BrowserWindow {}
 
 #[gtk4::template_callbacks]
@@ -106,13 +102,20 @@ impl BrowserWindow {
     #[template_callback]
     fn handle_toggle_darkmode(&self, _btn: &ToggleButton) {
         self.log("Toggling dark mode");
-        self.toggle_dark_mode();
-        self.statusbar.push(1, "We want to toggle dark mode");
+
+        if let Some(app) = self.obj().root()
+            .and_then(|w| w.downcast::<ApplicationWindow>().ok())
+            .and_then(|window| window.application()) {
+
+            app.activate_action("toggle-dark-mode", None);
+        }
     }
 
     #[template_callback]
     fn handle_refresh_clicked(&self, _btn: &Button) {
         self.log("Refreshing the current page");
+
+        // self.obj().activate_action("refresh-tab", None);
         self.statusbar.push(1, "We want to refresh the current page");
     }
 
@@ -132,17 +135,22 @@ impl BrowserWindow {
         self.statusbar.push(1, format!("Oh yeah.. full speed ahead to {}", entry.text().as_str()).as_str());
 
         let binding = entry.text();
-        let url = binding.as_str();
-        let icon = download_favicon(url);
+        let url = if binding.starts_with("http://") || binding.starts_with("https://") {
+            binding.to_string()
+        } else {
+            format!("https://{}", binding)
+        };
+        let icon = download_favicon(url.as_str());
 
         let mut manager = self.tab_manager.borrow_mut();
         let Some(tab) = manager.get_active_tab_mut() else {
             self.log("No tab selected, cannot navigate to URL");
             return
         };
-
-        tab.set_url(url);
+        tab.set_url(url.as_str());
+        tab.set_name(url.as_str());
         tab.set_favicon(icon);
+        drop(manager);
 
         self.refresh_tabs();
     }
@@ -152,31 +160,23 @@ impl BrowserWindow {
 impl BrowserWindow {
 
     pub fn log(&self, message: &str) {
+        let s = format!("[{}] {}\n", chrono::Local::now().format("%X"), message);
+        info!("{}", s.as_str());
+
         let buf = self.log.buffer();
         let mut iter = buf.end_iter();
-        buf.insert(&mut iter, format!("[{}] {}\n", chrono::Local::now().format("%X"), message).as_str());
+        buf.insert(&mut iter, s.as_str());
 
         let mark = buf.create_mark(None, &iter, false);
         self.log.scroll_to_mark(&mark, 0.0, true, 0.0, 1.0);
     }
 
     #[allow(dead_code)]
-    pub(crate) fn show_about_dialog(&self) {
-        let about = About::new();
-        about.show();
-    }
-
-    pub(crate) fn toggle_dark_mode(&self) {
-        if let Some(settings) = gtk::Settings::default() {
-            let is_dark = settings.is_gtk_application_prefer_dark_theme();
-            settings.set_gtk_application_prefer_dark_theme(!is_dark);
-        }
-    }
-
-    #[allow(dead_code)]
     pub(crate) fn close_tab(&self, tab_id: Uuid) {
         let mut manager = self.tab_manager.borrow_mut();
         manager.remove_tab(tab_id);
+        drop(manager);
+
         self.refresh_tabs();
     }
 
@@ -190,7 +190,7 @@ impl BrowserWindow {
             let label = self.create_label(tab);
             if self.tab_bar.pages().n_items() <= page_num {
                 // add new tab
-                let default_page = default_page();
+                let default_page = self.default_page();
                 self.tab_bar.append_page(&default_page, Some(&label));
             } else {
                 // update existing tab
@@ -221,6 +221,7 @@ impl BrowserWindow {
             label_vbox.append(&tab_label);
 
             let tab_btn = gtk::Button::builder()
+                .halign(gtk::Align::End)
                 .has_frame(false)
                 .margin_bottom(0)
                 .margin_end(0)
@@ -230,14 +231,13 @@ impl BrowserWindow {
             let img = Image::from_icon_name("window-close-symbolic");
             tab_btn.set_child(Some(&img));
 
+            let window_clone = self.obj().clone();
             let tab_clone = tab.clone();
-            tab_btn.connect_clicked({
-                // let self_clone = self.clone();
-                move |_| {
-                    info!("Clicked close button for tab {}", tab_clone.id());
-                    // println!("Clicked close button for tab {}", tab_clone.id());
-                    // self_clone.emit_by_name("close-tab", &[&tab_clone.id()]);
-                }
+            tab_btn.connect_clicked( move | _btn| {
+                info!("Clicked close button for tab {}", tab_clone.id());
+                let imp = window_clone.imp(); // `imp()` is now accessible on `ApplicationWindow`
+                imp.close_tab(tab_clone.id());
+                imp.refresh_tabs();
             });
 
             label_vbox.append(&tab_btn);
@@ -245,26 +245,27 @@ impl BrowserWindow {
 
         label_vbox
     }
+
+    fn default_page(&self) -> gtk::Box {
+        let img = gtk::Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
+        img.set_visible(true);
+        img.set_focusable(false);
+        img.set_valign(gtk::Align::End);
+        img.set_margin_top(64);
+        img.set_pixel_size(500);
+
+
+        let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        vbox.set_visible(true);
+        vbox.set_can_focus(false);
+        vbox.set_halign(gtk::Align::Center);
+        vbox.set_orientation(gtk::Orientation::Vertical);
+        vbox.set_vexpand(true);
+        vbox.set_hexpand(true);
+
+        vbox.append(&img);
+
+        vbox
+    }
 }
 
-fn default_page() -> gtk::Box {
-    let img = gtk::Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
-    img.set_visible(true);
-    img.set_focusable(false);
-    img.set_valign(gtk::Align::End);
-    img.set_margin_top(64);
-    img.set_pixel_size(500);
-
-
-    let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    vbox.set_visible(true);
-    vbox.set_can_focus(false);
-    vbox.set_halign(gtk::Align::Center);
-    vbox.set_orientation(gtk::Orientation::Vertical);
-    vbox.set_vexpand(true);
-    vbox.set_hexpand(true);
-
-    vbox.append(&img);
-
-    vbox
-}

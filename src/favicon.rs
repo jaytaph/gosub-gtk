@@ -2,6 +2,7 @@ use std::time::Duration;
 use gtk4::gdk_pixbuf::{Colorspace, Pixbuf};
 use reqwest::blocking::Client;
 
+// @TODO: Make async
 pub fn download_favicon(url: &str) -> Option<Pixbuf> {
     let client = Client::builder()
         .user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0")

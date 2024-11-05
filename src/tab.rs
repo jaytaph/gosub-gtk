@@ -156,11 +156,18 @@ impl GosubTabManager {
             self.ordering.push(tab.id);
         }
 
-        self.tabs.insert(tab.id, tab);
+        let tab_id = tab.id.clone();
+
+        self.tabs.insert(tab_id, tab);
+
+        if self.active_tab.borrow().is_none() {
+            self.set_active(tab_id);
+        }
     }
 
     pub fn remove_tab(&mut self, tab_id: Uuid) {
         if let Some(index) = self.ordering.iter().position(|id| id == &tab_id) {
+            println!("removing tab at index {}", index);
             self.ordering.remove(index);
         }
 

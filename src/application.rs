@@ -1,28 +1,31 @@
-use adw::subclass::prelude::AdwApplicationImpl;
+use crate::dialog::about::About;
+use crate::window::BrowserWindow;
+use crate::APP_ID;
+use adw::glib::clone;
+use adw::subclass::prelude::GtkApplicationImpl;
+use adw::{ColorScheme, StyleManager};
 use gtk4::{gio, glib, prelude::*, subclass::prelude::*};
 use gtk_macros::action;
-use adw::glib::clone;
 use log::info;
-use crate::window::BrowserWindow;
 
 mod imp {
-    use crate::window::BrowserWindow;
     use super::*;
+    use crate::window::BrowserWindow;
 
     pub struct Application {
+        // Here be settings structure and such
     }
 
     #[glib::object_subclass]
     impl ObjectSubclass for Application {
         const NAME: &'static str = "Application";
         type Type = super::Application;
-        type ParentType = adw::Application;
+        type ParentType = gtk4::Application;
     }
 
     impl Default for Application {
         fn default() -> Self {
-            Self {
-            }
+            Self {}
         }
     }
 
@@ -45,6 +48,7 @@ mod imp {
         }
 
         fn startup(&self) {
+            info!("GtkApplication<Application>::startup");
             self.parent_startup();
 
             let obj = self.obj();
@@ -54,7 +58,7 @@ mod imp {
     }
 
     impl GtkApplicationImpl for Application {}
-    impl AdwApplicationImpl for Application {}
+    // impl AdwApplicationImpl for Application {}
 }
 
 glib::wrapper! {
@@ -65,7 +69,7 @@ glib::wrapper! {
 impl Application {
     pub fn new() -> Self {
         glib::Object::builder()
-            .property("application-id", &"io.gosub.browser-gtk")
+            .property("application-id", APP_ID)
             .property("resource-base-path", &Some("/io/gosub/browser-gtk"))
             .build()
     }
@@ -80,45 +84,52 @@ impl Application {
             self,
             "quit",
             clone!(
-                #[weak(rename_to=app)] self,
+                #[weak(rename_to=app)]
+                self,
                 move |_, _| {
                     app.quit();
                 }
             )
         );
 
-        action!(
-            self,
-            "new-tab",
-            clone!(
-                #[weak(rename_to=_app)] self,
-                move |_, _| {
-                    info!("New tab action triggered");
-                    // app.new_tab();
-                }
-            )
-        );
+        // action!(
+        //     self,
+        //     "open-new-tab",
+        //     clone!(
+        //         #[weak(rename_to=_app)] self,
+        //         move |_, _| {
+        //             info!("New tab action triggered");
+        //             // app.new_tab();
+        //         }
+        //     )
+        // );
 
-        action!(
-            self,
-            "close-tab",
-            clone!(
-                #[weak(rename_to=_app)] self,
-                move |_, _| {
-                    info!("Close tab action triggered");
-                    // app.close_tab();
-                }
-            )
-        );
+        // action!(
+        //     self,
+        //     "close-tab",
+        //     clone!(
+        //         #[weak(rename_to=_app)] self,
+        //         move |_, _| {
+        //             info!("Close tab action triggered");
+        //             // app.close_tab();
+        //         }
+        //     )
+        // );
 
         action!(
             self,
             "toggle-dark-mode",
             clone!(
-                #[weak(rename_to=_app)] self,
+                #[weak(rename_to=_app)]
+                self,
                 move |_, _| {
                     info!("Toggle dark mode action triggered");
-                    // app.toggle_dark_mode();
+                    let mgr = StyleManager::default();
+                    if mgr.is_dark() {
+                        mgr.set_color_scheme(ColorScheme::ForceLight);
+                    } else {
+                        mgr.set_color_scheme(ColorScheme::ForceDark);
+                    }
                 }
             )
         );
@@ -127,34 +138,39 @@ impl Application {
             self,
             "show-about",
             clone!(
-                #[weak(rename_to=_app)] self,
+                #[weak(rename_to=_app)]
+                self,
                 move |_, _| {
                     info!("Show about dialog action triggered");
-                    // app.show_about_dialog();
+                    let about = About::new();
+                    about.show();
                 }
             )
         );
 
-        action!(
-            self,
-            "show-log",
-            clone!(
-                #[weak(rename_to=_app)] self,
-                move |_, _| {
-                    info!("Show log action triggered");
-                    // app.show_log();
-                }
-            )
-        );
+        // action!(
+        //     self,
+        //     "toggle-log",
+        //     clone!(
+        //         #[weak(rename_to=_app)] self,
+        //         move |_, _| {
+        //             info!("Show log action triggered");
+        //             // app.imp().local_command_line()
+        //         }
+        //     )
+        // );
     }
 
     fn setup_accelerators(&self) {
+        // Global application accelerators
         self.set_accels_for_action("app.quit", &["<Primary>Q"]);
-        self.set_accels_for_action("app.new-tab", &["<Primary>T"]);
-        self.set_accels_for_action("app.close-tab", &["<Primary>W"]);
         self.set_accels_for_action("app.toggle-dark-mode", &["<Primary>D"]);
         self.set_accels_for_action("app.show-about", &["<Primary>A"]);
-        self.set_accels_for_action("app.show-log", &["<Primary>L"]);
+
+        // // Window accelerators. This should be only when the window is active
+        // self.set_accels_for_action("app.open-new-tab", &["<Primary>T"]);
+        // self.set_accels_for_action("app.close-tab", &["<Primary>W"]);
+        // self.set_accels_for_action("app.toggle-log", &["<Primary>L"]);
     }
 
     pub fn run(&self) {
