@@ -6,7 +6,7 @@ use glib::subclass::InitializingObject;
 use gtk4::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, Image, ScrolledWindow};
 use log::info;
 use uuid::Uuid;
-use crate::tab::{GosubTab, GosubTabManager};
+use crate::tab::{GosubTab, GosubTabManager, TabCommand};
 use crate::favicon::download_favicon;
 
 #[derive(CompositeTemplate, Default)]
@@ -64,10 +64,7 @@ impl ObjectSubclass for BrowserWindow {
 impl ObjectImpl for BrowserWindow {
     fn constructed(&self) {
         self.parent_constructed();
-
         self.log("Browser created...");
-
-        // Initialize the status bar
         self.statusbar.push(1, "Ready to roll...");
     }
 }
@@ -121,7 +118,9 @@ impl BrowserWindow {
 
     #[template_callback]
     fn handle_searchbar_clicked(&self, entry: &Entry) {
-        let Some(page) = self.tab_bar.current_page() else {
+        let Some(page_num) = self.tab_bar.current_page() else {
+            self.log("No tab selected, so we create a new tab");
+
             let mut tab = GosubTab::new(entry.text().as_str(), None);
             tab.set_loading(true);
             self.tab_manager.borrow_mut().add_tab(tab, None);
@@ -130,7 +129,7 @@ impl BrowserWindow {
             return
         };
 
-        self.log(format!("We are currently on tab: {}", page).as_str());
+        self.log(format!("We are currently on tab: {}", page_num).as_str());
         self.log(format!("Visiting the URL {}", entry.text().as_str()).as_str());
         self.statusbar.push(1, format!("Oh yeah.. full speed ahead to {}", entry.text().as_str()).as_str());
 
@@ -143,14 +142,13 @@ impl BrowserWindow {
         let icon = download_favicon(url.as_str());
 
         let mut manager = self.tab_manager.borrow_mut();
-        let Some(tab) = manager.get_active_tab_mut() else {
+        let Some(tab) = manager.get_active_tab() else {
             self.log("No tab selected, cannot navigate to URL");
             return
         };
-        tab.set_url(url.as_str());
-        tab.set_name(url.as_str());
-        tab.set_favicon(icon);
-        drop(manager);
+        let tab_id = tab.id().clone();
+        manager.update_tab(tab_id, url.as_str(), url.as_str(), icon);
+        drop(manager);  // Drop borrow-muted manager, otherwise refresh-tab below cannot borrow it
 
         self.refresh_tabs();
     }
@@ -175,30 +173,46 @@ impl BrowserWindow {
     pub(crate) fn close_tab(&self, tab_id: Uuid) {
         let mut manager = self.tab_manager.borrow_mut();
         manager.remove_tab(tab_id);
-        drop(manager);
-
-        self.refresh_tabs();
     }
 
     pub(crate) fn refresh_tabs(&self) {
         let manager = self.tab_manager.borrow();
 
-        let mut page_num = 0;
-        for tab_id in manager.order() {
-            let tab = manager.get_tab(tab_id).unwrap();
-
-            let label = self.create_label(tab);
-            if self.tab_bar.pages().n_items() <= page_num {
-                // add new tab
-                let default_page = self.default_page();
-                self.tab_bar.append_page(&default_page, Some(&label));
-            } else {
-                // update existing tab
-                let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
-                self.tab_bar.set_tab_label(&page_child, Some(&label));
+        let commands = manager.commands();
+        for cmd in commands {
+            println!("Processing command: {:?}", cmd);
+            match cmd {
+                TabCommand::Activate(page_num) => {
+                    self.tab_bar.set_current_page(Some(page_num));
+                }
+                TabCommand::Insert(page_num) => {
+                    let tab = manager.get_tab(manager.page_to_tab(page_num).unwrap()).unwrap();
+                    let label = self.create_label(tab);
+                    let default_page = self.default_page();
+                    self.tab_bar.insert_page(&default_page, Some(&label), Some(page_num));
+                }
+                TabCommand::Close(page_num) => {
+                    self.tab_bar.remove_page(Some(page_num));
+                }
+                TabCommand::CloseAll => {
+                    for _ in 0..self.tab_bar.pages().n_items() {
+                        self.tab_bar.remove_page(Some(0));
+                    }
+                }
+                TabCommand::Move(src, dst) => {
+                    let page = self.tab_bar.nth_page(Some(src)).unwrap();
+                    self.tab_bar.reorder_child(&page, Some(dst));
+                }
+                TabCommand::Pin(_) => {}
+                TabCommand::Unpin(_) => {}
+                TabCommand::Private(_) => {}
+                TabCommand::Update(page_num) => {
+                    let tab = manager.get_tab(manager.page_to_tab(page_num).unwrap()).unwrap();
+                    let label = self.create_label(tab);
+                    let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
+                    self.tab_bar.set_tab_label(&page_child, Some(&label));
+                }
             }
-
-            page_num += 1;
         }
     }
 
@@ -246,7 +260,7 @@ impl BrowserWindow {
         label_vbox
     }
 
-    fn default_page(&self) -> gtk::Box {
+    fn default_page(&self) -> gtk4::Box {
         let img = gtk::Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
         img.set_visible(true);
         img.set_focusable(false);
@@ -254,8 +268,7 @@ impl BrowserWindow {
         img.set_margin_top(64);
         img.set_pixel_size(500);
 
-
-        let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let vbox = gtk4::Box::new(gtk::Orientation::Vertical, 0);
         vbox.set_visible(true);
         vbox.set_can_focus(false);
         vbox.set_halign(gtk::Align::Center);

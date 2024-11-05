@@ -92,30 +92,6 @@ impl Application {
             )
         );
 
-        // action!(
-        //     self,
-        //     "open-new-tab",
-        //     clone!(
-        //         #[weak(rename_to=_app)] self,
-        //         move |_, _| {
-        //             info!("New tab action triggered");
-        //             // app.new_tab();
-        //         }
-        //     )
-        // );
-
-        // action!(
-        //     self,
-        //     "close-tab",
-        //     clone!(
-        //         #[weak(rename_to=_app)] self,
-        //         move |_, _| {
-        //             info!("Close tab action triggered");
-        //             // app.close_tab();
-        //         }
-        //     )
-        // );
-
         action!(
             self,
             "toggle-dark-mode",
@@ -147,18 +123,6 @@ impl Application {
                 }
             )
         );
-
-        // action!(
-        //     self,
-        //     "toggle-log",
-        //     clone!(
-        //         #[weak(rename_to=_app)] self,
-        //         move |_, _| {
-        //             info!("Show log action triggered");
-        //             // app.imp().local_command_line()
-        //         }
-        //     )
-        // );
     }
 
     fn setup_accelerators(&self) {
@@ -166,11 +130,6 @@ impl Application {
         self.set_accels_for_action("app.quit", &["<Primary>Q"]);
         self.set_accels_for_action("app.toggle-dark-mode", &["<Primary>D"]);
         self.set_accels_for_action("app.show-about", &["<Primary>A"]);
-
-        // // Window accelerators. This should be only when the window is active
-        // self.set_accels_for_action("app.open-new-tab", &["<Primary>T"]);
-        // self.set_accels_for_action("app.close-tab", &["<Primary>W"]);
-        // self.set_accels_for_action("app.toggle-log", &["<Primary>L"]);
     }
 
     pub fn run(&self) {

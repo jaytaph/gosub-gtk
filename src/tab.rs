@@ -93,6 +93,20 @@ impl GosubTab {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
+pub enum TabCommand {
+    Close(u32),     // Close index
+    CloseAll,       // Close all
+    Move(u32, u32), // Move from index to index
+    Pin(u32),       // Pin index
+    Unpin(u32),     // Unpin index
+    Private(u32),   // Make private tab
+    Update(u32),    // Update index
+    Insert(u32),    // Insert index
+    Activate(u32),  // set as active
+}
+
 pub struct GosubTabManager {
     // All known tabs in the system
     tabs: HashMap<Uuid, GosubTab>,
@@ -103,6 +117,9 @@ pub struct GosubTabManager {
     dirty_tabs: Vec<Uuid>,
     // Actual ordering of the tabs in the notebook. Used for converting page_num to tab_id
     ordering: Vec<Uuid>,
+
+    // list of commands to execute on the tab notebook
+    commands: RefCell<Vec<TabCommand>>,
 }
 
 impl Default for GosubTabManager {
@@ -118,27 +135,21 @@ impl GosubTabManager {
             active_tab: RefCell::new(None),
             dirty_tabs: Vec::new(),
             ordering: Vec::new(),
+            commands: RefCell::new(Vec::new()),
         }
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn clear_dirty(&mut self) {
-        self.dirty_tabs.clear();
+    pub(crate) fn commands(&self) -> Vec<TabCommand> {
+        self.commands.borrow_mut().drain(..).collect()
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn dirty_tabs(&self) -> Vec<Uuid> {
-        self.dirty_tabs.clone()
-    }
-
-    #[allow(dead_code)]
     pub(crate) fn page_to_tab(&self, page_index: u32) -> Option<Uuid> {
         self.ordering.get(page_index as usize).cloned()
     }
 
-    pub(crate) fn get_active_tab_mut(&mut self) -> Option<&mut GosubTab> {
+    pub(crate) fn get_active_tab(&self) -> Option<&GosubTab> {
         match self.active_tab.borrow().as_ref() {
-            Some(tab_id) => self.tabs.get_mut(tab_id),
+            Some(tab_id) => self.tabs.get(tab_id),
             None => None,
         }
     }
@@ -147,17 +158,31 @@ impl GosubTabManager {
         let page_num = self.ordering.iter().position(|&id| id == tab_id);
         println!("Setting active tab to page {} / {}", page_num.unwrap(), tab_id);
         self.active_tab.replace(Some(tab_id));
+
+        self.commands.borrow_mut().push(TabCommand::Activate(page_num.unwrap() as u32));
+    }
+
+    pub(crate) fn update_tab(&mut self, tab_id: Uuid, url: &str, title: &str, favicon: Option<Pixbuf>) {
+        let tab = self.tabs.get_mut(&tab_id).expect("Tab not found");
+        tab.set_url(url);
+        tab.set_name(title);
+        tab.set_favicon(favicon);
+
+        self.commands.borrow_mut().push(TabCommand::Update(self.ordering.iter().position(|id| id == &tab_id).unwrap() as u32));
     }
 
     pub fn add_tab(&mut self, tab: GosubTab, position: Option<usize>) {
-        if let Some(pos) = position {
+        let pos = if let Some(pos) = position {
             self.ordering.insert(pos, tab.id);
+            pos
         } else {
             self.ordering.push(tab.id);
-        }
+            self.ordering.len() - 1
+        };
+
+        self.commands.borrow_mut().push(TabCommand::Insert(pos as u32));
 
         let tab_id = tab.id.clone();
-
         self.tabs.insert(tab_id, tab);
 
         if self.active_tab.borrow().is_none() {
@@ -169,6 +194,7 @@ impl GosubTabManager {
         if let Some(index) = self.ordering.iter().position(|id| id == &tab_id) {
             println!("removing tab at index {}", index);
             self.ordering.remove(index);
+            self.commands.borrow_mut().push(TabCommand::Close(index as u32));
         }
 
         self.tabs.remove(&tab_id);

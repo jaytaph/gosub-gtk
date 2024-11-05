@@ -4,7 +4,7 @@ TODO Gui specific stuff:
 - [ ] Implement the tab manager
 - [X] Implement open tab CTRL-T
 - [ ] Make async work, so we can init a tab with a spinner, async load favicon, and display favicon once loaded
-- [ ] Implement url loader in searchbar
+- [X] Implement url loader in searchbar
 - [X] implement closing tab
 - [ ] implement pinned tabs (should be working but no way to pin them yet)
 - [ ] implement tab dragging and sorting
