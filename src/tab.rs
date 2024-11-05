@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use gtk::gdk_pixbuf::Pixbuf;
+use gtk4::gdk_pixbuf::Pixbuf;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -131,6 +131,7 @@ impl GosubTabManager {
         self.dirty_tabs.clone()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn page_to_tab(&self, page_index: u32) -> Option<Uuid> {
         self.ordering.get(page_index as usize).cloned()
     }

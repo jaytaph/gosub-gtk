@@ -1,9 +1,11 @@
+use adw::gtk;
 use std::cell::RefCell;
 use std::rc::Rc;
 use glib::subclass::InitializingObject;
-use gtk::prelude::*;
-use gtk::subclass::prelude::*;
-use gtk::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, Image};
+use gtk4::prelude::*;
+use gtk4::subclass::prelude::*;
+use gtk4::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleButton, Notebook, Image};
+use log::info;
 use uuid::Uuid;
 use crate::tab::{GosubTab, GosubTabManager};
 use crate::dialog::about::About;
@@ -19,7 +21,7 @@ pub struct BrowserWindow {
     #[template_child]
     pub statusbar: TemplateChild<Statusbar>,
     #[template_child]
-    pub log_scroller: TemplateChild<gtk::ScrolledWindow>,
+    pub log_scroller: TemplateChild<gtk4::ScrolledWindow>,
     #[template_child]
     pub log: TemplateChild<TextView>,
 
@@ -78,7 +80,7 @@ impl WindowImpl for BrowserWindow {}
 
 impl ApplicationWindowImpl for BrowserWindow {}
 
-#[gtk::template_callbacks]
+#[gtk4::template_callbacks]
 impl BrowserWindow {
 
     #[template_callback]
@@ -158,6 +160,7 @@ impl BrowserWindow {
         self.log.scroll_to_mark(&mark, 0.0, true, 0.0, 1.0);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn show_about_dialog(&self) {
         let about = About::new();
         about.show();
@@ -170,6 +173,7 @@ impl BrowserWindow {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn close_tab(&self, tab_id: Uuid) {
         let mut manager = self.tab_manager.borrow_mut();
         manager.remove_tab(tab_id);
@@ -227,12 +231,14 @@ impl BrowserWindow {
             tab_btn.set_child(Some(&img));
 
             let tab_clone = tab.clone();
-            tab_btn.connect_clicked(
+            tab_btn.connect_clicked({
+                // let self_clone = self.clone();
                 move |_| {
-                    println!("Clicked close button for tab {}", tab_clone.id());
-                    self.close_tab(tab_clone.id());
+                    info!("Clicked close button for tab {}", tab_clone.id());
+                    // println!("Clicked close button for tab {}", tab_clone.id());
+                    // self_clone.emit_by_name("close-tab", &[&tab_clone.id()]);
                 }
-            );
+            });
 
             label_vbox.append(&tab_btn);
         }

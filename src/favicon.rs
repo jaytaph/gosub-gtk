@@ -1,5 +1,5 @@
 use std::time::Duration;
-use gtk::gdk_pixbuf::{Colorspace, Pixbuf};
+use gtk4::gdk_pixbuf::{Colorspace, Pixbuf};
 use reqwest::blocking::Client;
 
 pub fn download_favicon(url: &str) -> Option<Pixbuf> {
