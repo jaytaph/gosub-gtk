@@ -1,14 +1,14 @@
 # Gosub GTK browser prototype
 
 TODO Gui specific stuff:
-- [ ] Implement the tab manager
+- [X] Implement the tab manager
 - [X] Implement open tab CTRL-T
 - [ ] Make async work, so we can init a tab with a spinner, async load favicon, and display favicon once loaded
 - [X] Implement url loader in searchbar
 - [X] implement closing tab
 - [ ] implement pinned tabs (should be working but no way to pin them yet)
 - [ ] implement tab dragging and sorting
-- [ ] change title of window based on the title of the tab
+- [X] change title of window based on the title of the tab
 - [ ] implement url history (per tab)
 - [X] implement scroller for logging window
 - [X] show/hide logging window with CTRL-L

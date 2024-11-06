@@ -115,6 +115,9 @@ impl BrowserWindow {
                 let tab_id = mgr.page_to_tab(page_num);
                 if let Some(tab_id) = tab_id {
                     mgr.set_active(tab_id);
+
+                    let name = mgr.get_tab(tab_id).unwrap().name();
+                    window_clone.set_title(Some(name));
                 }
             }
         });
