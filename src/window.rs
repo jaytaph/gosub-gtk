@@ -34,7 +34,6 @@ impl BrowserWindow {
             .expect("Could not find app-menu");
 
         app.set_menubar(Some(&menubar));
-        // app.set_app_menu(Some(&menubar));
         window.set_show_menubar(true);
 
         window.imp().init_tabs();

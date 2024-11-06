@@ -7,7 +7,7 @@ use gtk4::{glib, Entry, Button, Statusbar, CompositeTemplate, TextView, ToggleBu
 use log::info;
 use uuid::Uuid;
 use crate::tab::{GosubTab, GosubTabManager, TabCommand};
-use crate::favicon::download_favicon;
+use crate::fetcher::{fetch_favicon, fetch_url_body};
 
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/io/gosub/browser-gtk/ui/window.ui")]
@@ -22,7 +22,7 @@ pub struct BrowserWindow {
     pub log_scroller: TemplateChild<ScrolledWindow>,
     #[template_child]
     pub log: TemplateChild<TextView>,
-
+    /// Tab manager to handle all tabs
     pub tab_manager: Rc<RefCell<GosubTabManager>>,
 }
 
@@ -36,12 +36,17 @@ impl BrowserWindow {
             "https://gosub.io",
         ];
 
+        let mut tab_ids = Vec::new();
         for url in initial_tabs.iter() {
-            let icon = download_favicon(url);
-            self.tab_manager.borrow_mut().add_tab(GosubTab::new(url, icon), None);
+            let tab_id = self.tab_manager.borrow_mut().add_tab(GosubTab::new(url, None), None);
+            tab_ids.push(tab_id);
         }
-
         self.refresh_tabs();
+
+        for tab_id in tab_ids {
+            self.async_load_favicon(tab_id);
+            self.async_load_url(tab_id);
+        }
     }
 }
 
@@ -78,22 +83,25 @@ impl BrowserWindow {
 
     #[template_callback]
     fn handle_new_tab(&self, _btn: &Button) {
-        self.log("Opening a new tab");
-        self.statusbar.push(1, "We want to open a new tab");
-
-        self.tab_manager.borrow_mut().add_tab(GosubTab::new("gosub:blank", None), None);
+        todo!("not yet implemented");
+        // self.log("Opening a new tab");
+        // self.statusbar.push(1, "We want to open a new tab");
+        // self.tab_manager.borrow_mut().add_tab(GosubTab::new("gosub:blank", None), None);
+        // self.refresh_tabs();
     }
 
     #[template_callback]
     fn handle_close_tab(&self, _btn: &Button) {
-        self.log("Closing the current tab");
-        self.statusbar.push(1, "We want to close the current tab");
+        todo!("not yet implemented");
+        // self.log("Closing the current tab");
+        // self.statusbar.push(1, "We want to close the current tab");
     }
 
     #[template_callback]
     fn handle_prev_clicked(&self, _btn: &Button) {
-        self.log("Going back to the previous page");
-        self.statusbar.push(1, "We want to view the previous page");
+        todo!("not yet implemented");
+        // self.log("Going back to the previous page");
+        // self.statusbar.push(1, "We want to view the previous page");
     }
 
     #[template_callback]
@@ -118,18 +126,17 @@ impl BrowserWindow {
 
     #[template_callback]
     fn handle_searchbar_clicked(&self, entry: &Entry) {
-        let Some(page_num) = self.tab_bar.current_page() else {
-            self.log("No tab selected, so we create a new tab");
+        let tab_id = self.tab_manager.borrow().get_active_tab().unwrap().id().clone();
 
-            let mut tab = GosubTab::new(entry.text().as_str(), None);
-            tab.set_loading(true);
-            self.tab_manager.borrow_mut().add_tab(tab, None);
+        // let tab_id = let Some(page_num) = self.tab_bar.current_page() else {
+        //     self.log("No tab selected, so we create a new tab");
+        //
+        //     let tab = GosubTab::new(entry.text().as_str(), None);
+        //     let tab_id = self.tab_manager.borrow_mut().add_tab(tab, None);
+        // };
+        //
+        // self.log(format!("We are currently on tab: {}", page_num).as_str());
 
-            self.refresh_tabs();
-            return
-        };
-
-        self.log(format!("We are currently on tab: {}", page_num).as_str());
         self.log(format!("Visiting the URL {}", entry.text().as_str()).as_str());
         self.statusbar.push(1, format!("Oh yeah.. full speed ahead to {}", entry.text().as_str()).as_str());
 
@@ -139,16 +146,13 @@ impl BrowserWindow {
         } else {
             format!("https://{}", binding)
         };
-        let icon = download_favicon(url.as_str());
 
-        let mut manager = self.tab_manager.borrow_mut();
-        let Some(tab) = manager.get_active_tab() else {
-            self.log("No tab selected, cannot navigate to URL");
-            return
-        };
-        let tab_id = tab.id().clone();
-        manager.update_tab(tab_id, url.as_str(), url.as_str(), icon);
-        drop(manager);  // Drop borrow-muted manager, otherwise refresh-tab below cannot borrow it
+        let mut mgr = self.tab_manager.borrow_mut();
+        let tab = mgr.get_tab_mut(tab_id).unwrap();
+        tab.set_url(url.as_str());
+
+        self.async_load_favicon(tab_id);
+        self.async_load_url(tab_id);
 
         self.refresh_tabs();
     }
@@ -191,8 +195,8 @@ impl BrowserWindow {
                 }
                 TabCommand::Insert(page_num) => {
                     let tab = manager.get_tab(manager.page_to_tab(page_num).unwrap()).unwrap();
-                    let label = self.create_label(tab);
-                    let default_page = self.default_page();
+                    let label = self.generate_label(tab);
+                    let default_page = self.generate_default_page();
                     self.tab_bar.insert_page(&default_page, Some(&label), Some(page_num));
                 }
                 TabCommand::Close(page_num) => {
@@ -212,7 +216,7 @@ impl BrowserWindow {
                 TabCommand::Private(_) => {}
                 TabCommand::Update(page_num) => {
                     let tab = manager.get_tab(manager.page_to_tab(page_num).unwrap()).unwrap();
-                    let label = self.create_label(tab);
+                    let label = self.generate_label(tab);
                     let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
                     self.tab_bar.set_tab_label(&page_child, Some(&label));
                 }
@@ -220,8 +224,8 @@ impl BrowserWindow {
         }
     }
 
-    // Create a new tab label
-    pub fn create_label(&self, tab: &GosubTab) -> gtk::Box {
+    // generate tab label
+    pub fn generate_label(&self, tab: &GosubTab) -> gtk::Box {
         let label_vbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
 
         // When the tab is loading, we show a spinner
@@ -264,7 +268,7 @@ impl BrowserWindow {
         label_vbox
     }
 
-    fn default_page(&self) -> gtk4::Box {
+    fn generate_default_page(&self) -> gtk4::Box {
         let img = Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
         img.set_visible(true);
         img.set_focusable(false);
@@ -283,6 +287,55 @@ impl BrowserWindow {
         vbox.append(&img);
 
         vbox
+    }
+
+    fn async_load_url(&self, tab_id: Uuid) {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(self.load_url(tab_id));
+    }
+
+    fn async_load_favicon(&self, tab_id: Uuid) {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                let url = self.tab_manager.borrow().get_tab(tab_id).unwrap().url().to_string();
+                let icon = fetch_favicon(url.as_str()).await;
+
+                self.tab_manager.borrow_mut().update_tab(tab_id, url.as_str(), url.as_str(), icon);
+                self.refresh_tabs();
+            });
+    }
+
+    async fn load_url(&self, tab_id: Uuid) {
+        let mut mgr = self.tab_manager.borrow_mut();
+        let tab = mgr.get_tab_mut(tab_id).unwrap();
+        let url = tab.url().to_string();
+
+        // Add / update tab and set the spinner to loading
+        self.log(format!("Loading URL: {}", url).as_str());
+        tab.set_loading(true);
+        mgr.mark_tab_updated(tab_id);
+        // self.refresh_tabs();
+
+        self.log(format!("Fetching URL: {}", url).as_str());
+        match fetch_url_body(url.as_str()).await {
+            Ok(body) => {
+                self.log(format!("Fetched URL: {}", url).as_str());
+                tab.set_content(body);
+            }
+            Err(e) => {
+                self.log(format!("Failed to fetch URL: {}", e).as_str());
+            }
+        }
+
+        tab.set_loading(false);
+        mgr.mark_tab_updated(tab_id);
+        // self.refresh_tabs();
     }
 }
 

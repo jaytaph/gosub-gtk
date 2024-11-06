@@ -21,8 +21,8 @@ pub struct GosubTab {
     name: String,
     /// Loaded favicon of the tab
     favicon: Option<Pixbuf>,
-    // Text buffer holds the text of the tab (this is the page rendered later)
-    // buffer: gtk::TextBuffer,
+    /// Actual content (HTML) of the tab
+    content: String,
 }
 
 impl GosubTab {
@@ -36,12 +36,17 @@ impl GosubTab {
             history: Vec::new(),
             name: url.to_string(),
             favicon,
+            content: String::new(),
             // buffer: gtk::TextBuffer::new(None),
         }
     }
 
     pub fn id(&self) -> Uuid {
         self.id
+    }
+
+    pub fn url(&self) -> &str {
+        &self.url
     }
 
     pub fn name(&self) -> &str {
@@ -58,6 +63,14 @@ impl GosubTab {
 
     pub fn set_private(&mut self, private: bool) {
         self.private = private;
+    }
+
+    pub fn set_content(&mut self, content: String) {
+        self.content = content;
+    }
+
+    pub fn content(&self) -> &str {
+        &self.content
     }
 
     pub(crate) fn is_loading(&self) -> bool {
@@ -112,13 +125,9 @@ pub struct GosubTabManager {
     tabs: HashMap<Uuid, GosubTab>,
     // Currently active tab, if any
     active_tab: RefCell<Option<Uuid>>,
-    // Any tabs that need repainting because they might be changed
-    #[allow(dead_code)]
-    dirty_tabs: Vec<Uuid>,
     // Actual ordering of the tabs in the notebook. Used for converting page_num to tab_id
     ordering: Vec<Uuid>,
-
-    // list of commands to execute on the tab notebook
+    // list of commands to execute on the next tab notebook update
     commands: RefCell<Vec<TabCommand>>,
 }
 
@@ -133,7 +142,6 @@ impl GosubTabManager {
         GosubTabManager {
             tabs: HashMap::new(),
             active_tab: RefCell::new(None),
-            dirty_tabs: Vec::new(),
             ordering: Vec::new(),
             commands: RefCell::new(Vec::new()),
         }
@@ -141,6 +149,10 @@ impl GosubTabManager {
 
     pub(crate) fn commands(&self) -> Vec<TabCommand> {
         self.commands.borrow_mut().drain(..).collect()
+    }
+
+    pub(crate) fn tab_to_page(&self, tab_id: Uuid) -> Option<u32> {
+        self.ordering.iter().position(|id| id == &tab_id).map(|pos| pos as u32)
     }
 
     pub(crate) fn page_to_tab(&self, page_index: u32) -> Option<Uuid> {
@@ -166,6 +178,12 @@ impl GosubTabManager {
         self.commands.borrow_mut().push(TabCommand::Activate(page_num.unwrap() as u32));
     }
 
+    pub fn mark_tab_updated(&mut self, tab_id: Uuid) {
+        if let Some(page_num) = self.tab_to_page(tab_id) {
+            self.commands.borrow_mut().push(TabCommand::Update(page_num));
+        }
+    }
+
     pub(crate) fn update_tab(&mut self, tab_id: Uuid, url: &str, title: &str, favicon: Option<Pixbuf>) {
         let tab = self.tabs.get_mut(&tab_id).expect("Tab not found");
         tab.set_url(url);
@@ -175,7 +193,7 @@ impl GosubTabManager {
         self.commands.borrow_mut().push(TabCommand::Update(self.ordering.iter().position(|id| id == &tab_id).unwrap() as u32));
     }
 
-    pub fn add_tab(&mut self, tab: GosubTab, position: Option<usize>) {
+    pub fn add_tab(&mut self, tab: GosubTab, position: Option<usize>) -> Uuid {
         let pos = if let Some(pos) = position {
             self.ordering.insert(pos, tab.id);
             pos
@@ -192,6 +210,8 @@ impl GosubTabManager {
         if self.active_tab.borrow().is_none() {
             self.set_active(tab_id);
         }
+
+        tab_id
     }
 
     pub fn remove_tab(&mut self, tab_id: Uuid) {

@@ -1,7 +1,7 @@
 mod window;
 mod tab;
 mod dialog;
-mod favicon;
+mod fetcher;
 mod application;
 
 use adw::gdk::Display;
@@ -17,8 +17,6 @@ fn main() {
     gio::resources_register_include!("gosub.gresource").expect("Failed to register resources.");
 
     let app = Application::new();
-
-
     app.connect_startup(|_| load_css());
     app.run();
 }
