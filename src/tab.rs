@@ -147,6 +147,10 @@ impl GosubTabManager {
         self.ordering.get(page_index as usize).cloned()
     }
 
+    pub(crate) fn tab_count(&self) -> usize {
+        self.tabs.len()
+    }
+
     pub(crate) fn get_active_tab(&self) -> Option<&GosubTab> {
         match self.active_tab.borrow().as_ref() {
             Some(tab_id) => self.tabs.get(tab_id),

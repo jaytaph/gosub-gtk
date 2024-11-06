@@ -172,6 +172,10 @@ impl BrowserWindow {
     #[allow(dead_code)]
     pub(crate) fn close_tab(&self, tab_id: Uuid) {
         let mut manager = self.tab_manager.borrow_mut();
+        if manager.tab_count() == 1 {
+            self.log("Cannot close the last tab");
+            return
+        }
         manager.remove_tab(tab_id);
     }
 
@@ -261,18 +265,18 @@ impl BrowserWindow {
     }
 
     fn default_page(&self) -> gtk4::Box {
-        let img = gtk::Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
+        let img = Image::from_resource("/io/gosub/browser-gtk/assets/submarine.svg");
         img.set_visible(true);
         img.set_focusable(false);
-        img.set_valign(gtk::Align::End);
+        img.set_valign(gtk::Align::Center);
         img.set_margin_top(64);
         img.set_pixel_size(500);
+        img.set_hexpand(true);
 
         let vbox = gtk4::Box::new(gtk::Orientation::Vertical, 0);
         vbox.set_visible(true);
         vbox.set_can_focus(false);
         vbox.set_halign(gtk::Align::Center);
-        vbox.set_orientation(gtk::Orientation::Vertical);
         vbox.set_vexpand(true);
         vbox.set_hexpand(true);
 
