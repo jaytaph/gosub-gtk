@@ -790,6 +790,7 @@ dependencies = [
 name = "gosub-gtk"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "chrono",
  "colog",
  "glib-build-tools",

@@ -178,19 +178,19 @@ impl GosubTabManager {
         self.commands.borrow_mut().push(TabCommand::Activate(page_num.unwrap() as u32));
     }
 
-    pub fn mark_tab_updated(&mut self, tab_id: Uuid) {
+    pub fn mark_tab_updated(&self, tab_id: Uuid) {
         if let Some(page_num) = self.tab_to_page(tab_id) {
             self.commands.borrow_mut().push(TabCommand::Update(page_num));
         }
     }
 
-    pub(crate) fn update_tab(&mut self, tab_id: Uuid, url: &str, title: &str, favicon: Option<Pixbuf>) {
-        let tab = self.tabs.get_mut(&tab_id).expect("Tab not found");
-        tab.set_url(url);
-        tab.set_name(title);
-        tab.set_favicon(favicon);
-
+    pub(crate) fn notify_tab_changed(&self, tab_id: Uuid) {
         self.commands.borrow_mut().push(TabCommand::Update(self.ordering.iter().position(|id| id == &tab_id).unwrap() as u32));
+    }
+
+    pub(crate) fn update_tab(&mut self, tab_id: Uuid, tab: &GosubTab) {
+        self.tabs.insert(tab_id, tab.clone());
+        self.notify_tab_changed(tab_id);
     }
 
     pub fn add_tab(&mut self, tab: GosubTab, position: Option<usize>) -> Uuid {

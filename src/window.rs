@@ -1,5 +1,6 @@
 use adw::gio::SimpleAction;
 use adw::gtk;
+use gtk4::glib::closure_local;
 use gtk::glib;
 
 mod imp;
@@ -10,6 +11,7 @@ use gtk::gio;
 use gtk::prelude::GtkWindowExt;
 use gtk::prelude::*;
 use gtk::subclass::prelude::ObjectSubclassIsExt;
+use log::info;
 
 // This wrapper must be in a different module than the implementation, because both will define a
 // `struct BrowserWindow` and they would clash. In this case, the browser window is a subclass of
@@ -36,10 +38,10 @@ impl BrowserWindow {
         app.set_menubar(Some(&menubar));
         window.set_show_menubar(true);
 
-        window.imp().init_tabs();
-
         Self::connect_actions(app, &window);
         Self::connect_accelerators(app, &window);
+
+        window.imp().init_tabs();
 
         window
     }
@@ -63,6 +65,16 @@ impl BrowserWindow {
         });
         app.add_action(&logwindow_action);
 
+        let window_clone = window.clone();
+        window.connect_closure(
+            "update-tabs",
+            false,
+            closure_local!(move |_: BrowserWindow| {
+                info!("Refreshing tabs handler called");
+                window_clone.imp().refresh_tabs();
+            }),
+        );
+
         // Create new tab
         let new_tab_action = SimpleAction::new("open-new-tab", None);
         new_tab_action.connect_activate({
@@ -70,7 +82,7 @@ impl BrowserWindow {
             let tab_manager = window.imp().tab_manager.clone();
             move |_, _| {
                 let tab_data = GosubTab::new("gosub:blank", None);
-                tab_manager.borrow_mut().add_tab(tab_data, None);
+                tab_manager.lock().unwrap().add_tab(tab_data, None);
                 window_clone.imp().refresh_tabs();
             }
         });
@@ -110,7 +122,7 @@ impl BrowserWindow {
                 window_clone
                     .imp()
                     .log(format!("switched to tab: {}", page_num).as_str());
-                let mgr = window_clone.imp().tab_manager.borrow();
+                let mgr = window_clone.imp().tab_manager.lock().unwrap();
                 let tab_id = mgr.page_to_tab(page_num);
                 if let Some(tab_id) = tab_id {
                     mgr.set_active(tab_id);

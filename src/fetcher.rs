@@ -5,10 +5,10 @@ use reqwest::{Client, Error, Response};
 
 const GOSUB_USERAGENT_STRING: &str = "Mozilla/5.0 (X11; Linux x86_64; Wayland; rv:1.0) Gecko/20231106 Gosub/0.1 Firefox/89.0";
 
-pub async fn fetch_url_body(url: &str) -> Result<String, Error> {
+pub async fn fetch_url_body(url: &str) -> Result<Vec<u8>, Error> {
     match fetch_url(url).await {
         Ok(response) => {
-            let body = response.text().await?;
+            let body = response.bytes().await?.to_vec();
             Ok(body)
         }
         Err(e) => Err(e),
@@ -31,7 +31,7 @@ pub async fn fetch_favicon(url: &str) -> Option<Pixbuf> {
         return None;
     };
 
-    let Ok(img) = image::load_from_memory(&buf.as_bytes()) else {
+    let Ok(img) = image::load_from_memory(&buf) else {
         info!("Failed to load favicon into buffer (image)");
         return None;
     };
