@@ -13,7 +13,6 @@ mod imp {
     use crate::window::BrowserWindow;
 
     pub struct Application {
-        // Here be settings structure and such
     }
 
     #[glib::object_subclass]
@@ -58,7 +57,6 @@ mod imp {
     }
 
     impl GtkApplicationImpl for Application {}
-    // impl AdwApplicationImpl for Application {}
 }
 
 glib::wrapper! {
@@ -80,48 +78,36 @@ impl Application {
     }
 
     fn setup_actions(&self) {
-        action!(
+        action!(self, "quit", clone!(
+            #[weak(rename_to=app)]
             self,
-            "quit",
-            clone!(
-                #[weak(rename_to=app)]
-                self,
-                move |_, _| {
-                    app.quit();
-                }
-            )
+            move |_, _| {
+                app.quit();
+            })
         );
 
-        action!(
+        action!(self, "toggle-dark-mode", clone!(
+            #[weak(rename_to=_app)]
             self,
-            "toggle-dark-mode",
-            clone!(
-                #[weak(rename_to=_app)]
-                self,
-                move |_, _| {
-                    info!("Toggle dark mode action triggered");
-                    let mgr = StyleManager::default();
-                    if mgr.is_dark() {
-                        mgr.set_color_scheme(ColorScheme::ForceLight);
-                    } else {
-                        mgr.set_color_scheme(ColorScheme::ForceDark);
-                    }
+            move |_, _| {
+                info!("Toggle dark mode action triggered");
+                let mgr = StyleManager::default();
+                if mgr.is_dark() {
+                    mgr.set_color_scheme(ColorScheme::ForceLight);
+                } else {
+                    mgr.set_color_scheme(ColorScheme::ForceDark);
                 }
-            )
+            })
         );
 
-        action!(
+        action!(self, "show-about", clone!(
+            #[weak(rename_to=_app)]
             self,
-            "show-about",
-            clone!(
-                #[weak(rename_to=_app)]
-                self,
-                move |_, _| {
-                    info!("Show about dialog action triggered");
-                    let about = About::new();
-                    about.show();
-                }
-            )
+            move |_, _| {
+                info!("Show about dialog action triggered");
+                let about = About::new();
+                about.show();
+            })
         );
     }
 
@@ -129,7 +115,7 @@ impl Application {
         // Global application accelerators
         self.set_accels_for_action("app.quit", &["<Primary>Q"]);
         self.set_accels_for_action("app.toggle-dark-mode", &["<Primary>D"]);
-        self.set_accels_for_action("app.show-about", &["<Primary>A"]);
+        self.set_accels_for_action("app.show-about", &["F1"]);
     }
 
     pub fn run(&self) {

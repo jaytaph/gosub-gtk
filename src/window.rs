@@ -1,15 +1,18 @@
 use adw::gio::SimpleAction;
 use adw::gtk;
+use gtk4::glib::{clone, spawn_future_local};
 use gtk::glib;
 
 mod imp;
+mod message;
 
 use crate::application::Application;
-use crate::tab::GosubTab;
 use gtk::gio;
 use gtk::prelude::GtkWindowExt;
 use gtk::prelude::*;
 use gtk::subclass::prelude::ObjectSubclassIsExt;
+use crate::runtime;
+use crate::window::message::Message;
 
 // This wrapper must be in a different module than the implementation, because both will define a
 // `struct BrowserWindow` and they would clash. In this case, the browser window is a subclass of
@@ -26,7 +29,7 @@ impl BrowserWindow {
 
         window.set_resizable(true);
         window.set_decorated(true);
-        window.set_default_size(800, 600);
+        window.set_default_size(1024, 768);
 
         let builder = gtk::Builder::from_resource("/io/gosub/browser-gtk/ui/main_menu.ui");
         let menubar = builder
@@ -34,13 +37,33 @@ impl BrowserWindow {
             .expect("Could not find app-menu");
 
         app.set_menubar(Some(&menubar));
-        // app.set_app_menu(Some(&menubar));
         window.set_show_menubar(true);
-
-        window.imp().init_tabs();
 
         Self::connect_actions(app, &window);
         Self::connect_accelerators(app, &window);
+
+        // Spawn handler
+        let window_clone = window.clone();
+        spawn_future_local(async move {
+            loop {
+                match window_clone.imp().get_receiver().recv().await {
+                    Ok(message) => {
+                        window_clone.imp().handle_message(message).await;
+                    }
+                    Err(e) => {
+                        log::error!("Error receiving message: {:?}", e);
+                        return;
+                    }
+                }
+            }
+        });
+
+        // Refresh tabs on startup
+        let window_clone = window.clone();
+        spawn_future_local(async move {
+            // Refresh tabs on startup
+            window_clone.imp().get_sender().send(Message::RefreshTabs()).await.unwrap();
+        });
 
         window
     }
@@ -65,15 +88,17 @@ impl BrowserWindow {
         app.add_action(&logwindow_action);
 
         // Create new tab
+        let window_clone = window.clone();
         let new_tab_action = SimpleAction::new("open-new-tab", None);
-        new_tab_action.connect_activate({
-            let window_clone = window.clone();
-            let tab_manager = window.imp().tab_manager.clone();
-            move |_, _| {
-                let tab_data = GosubTab::new("gosub:blank", None);
-                tab_manager.borrow_mut().add_tab(tab_data, None);
-                window_clone.imp().refresh_tabs();
-            }
+        new_tab_action.connect_activate(move | _, _ |{
+            let sender = window_clone.imp().sender.clone();
+            runtime().spawn(clone!(
+                #[strong]
+                sender,
+                async move {
+                    sender.send(Message::OpenTab("about:blank".into())).await.unwrap();
+                }
+            ));
         });
         app.add_action(&new_tab_action);
 
@@ -83,7 +108,7 @@ impl BrowserWindow {
             move |_notebook, _, page_num| {
                 window_clone
                     .imp()
-                    .log(format!("added tab: {}", page_num).as_str());
+                    .log(format!("[result] added a tab on page {}", page_num).as_str());
             }
         });
 
@@ -92,7 +117,7 @@ impl BrowserWindow {
             move |_notebook, _, page_num| {
                 window_clone
                     .imp()
-                    .log(format!("removed tab: {}", page_num).as_str());
+                    .log(format!("[result] removed tab: {}", page_num).as_str());
             }
         });
 
@@ -101,7 +126,7 @@ impl BrowserWindow {
             move |_notebook, _, page_num| {
                 window_clone
                     .imp()
-                    .log(format!("reordered tab: {}", page_num).as_str());
+                    .log(format!("[result] reordered tab: {}", page_num).as_str());
             }
         });
 
@@ -110,15 +135,15 @@ impl BrowserWindow {
             move |_notebook, _, page_num| {
                 window_clone
                     .imp()
-                    .log(format!("switched to tab: {}", page_num).as_str());
-                let mgr = window_clone.imp().tab_manager.borrow();
-                let tab_id = mgr.page_to_tab(page_num);
-                if let Some(tab_id) = tab_id {
-                    mgr.set_active(tab_id);
+                    .log(format!("[result] switched to tab: {}", page_num).as_str());
 
-                    let name = mgr.get_tab(tab_id).unwrap().name();
-                    window_clone.set_title(Some(name));
+                let tab_manager = window_clone.imp().tab_manager.clone();
+                let binding = tab_manager.clone();
+                let mut manager = binding.lock().unwrap();
+                if let Some(tab_id) = manager.page_to_tab(page_num) {
+                    manager.set_active(tab_id);
                 }
+                drop(manager);
             }
         });
     }
