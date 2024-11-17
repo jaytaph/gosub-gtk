@@ -13,6 +13,7 @@ TODO Gui specific stuff:
 - [X] implement scroller for logging window
 - [X] show/hide logging window with CTRL-L
 - [X] show raw HTML inside browser tab so we can see things are loaded
+- [ ] Address bar should reflect current address
 
 TODO Gosub engine implementation (assumes async eventloop is implemented in gosub engine):
 - [ ] Make sure we can use vello in a window for drawing

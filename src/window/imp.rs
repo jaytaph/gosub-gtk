@@ -1,4 +1,4 @@
-use adw::{prelude::*, subclass::prelude::*, ApplicationWindow};
+use adw::{prelude::*, subclass::prelude::*, ColorScheme, StyleManager};
 use adw::gtk;
 use std::sync::Arc;
 use adw::glib::subclass::Signal;
@@ -123,11 +123,12 @@ impl BrowserWindow {
     fn handle_toggle_darkmode(&self, _btn: &ToggleButton) {
         self.log("Toggling dark mode");
 
-        if let Some(app) = self.obj().root()
-            .and_then(|w| w.downcast::<ApplicationWindow>().ok())
-            .and_then(|window| window.application()) {
-
-            app.activate_action("toggle-dark-mode", None);
+        info!("Toggle dark mode action triggered");
+        let mgr = StyleManager::default();
+        if mgr.is_dark() {
+            mgr.set_color_scheme(ColorScheme::ForceLight);
+        } else {
+            mgr.set_color_scheme(ColorScheme::ForceDark);
         }
     }
 
