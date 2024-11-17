@@ -52,7 +52,6 @@ impl Default for BrowserWindow {
 }
 
 impl BrowserWindow {
-
     pub(crate) fn get_sender(&self) -> Arc<Sender<Message>> {
         self.sender.clone()
     }
@@ -60,22 +59,6 @@ impl BrowserWindow {
     pub(crate) fn get_receiver(&self) -> Arc<Receiver<Message>> {
         self.receiver.clone()
     }
-
-    pub(crate) async fn init_tabs(&self) {
-        // let initial_tabs = [
-        //     "about:blank",
-        //     // "https://duckduckgo.com",
-        //     // "https://news.ycombinator.com",
-        //     // "https://reddit.com",
-        //     // "https://gosub.io",
-        // ];
-        //
-        // for url in initial_tabs.iter() {
-        //     let message = Message::c(url.to_string());
-        //     self.sender.send(message).await.unwrap();
-        // }
-    }
-
 }
 
 
@@ -162,21 +145,19 @@ impl BrowserWindow {
         self.statusbar.push(1, format!("Oh yeah.. full speed ahead to {}", entry.text().as_str()).as_str());
 
         let binding = entry.text();
-        let url = if binding.starts_with("http://") || binding.starts_with("https://") {
-            binding.to_string()
+        if binding.starts_with("about:") {
+            // About: pages are special, we don't need to prefix them with a protocol
+            self.sender.send(Message::LoadUrl(tab_id, binding.to_string())).await.unwrap();
+            return;
+        } else if binding.starts_with("http://") || binding.starts_with("https://") {
+            // https:// and http:// protocols are loaded as-is
+            self.sender.send(Message::LoadUrl(tab_id, binding.to_string())).await.unwrap();
         } else {
-            format!("https://{}", binding)
+            // No protocol, we use https:// as a prefix
+            let url = format!("https://{}", binding);
+            self.sender.send(Message::LoadUrl(tab_id, url)).await.unwrap();
         };
 
-        self.sender.send(Message::LoadUrl(tab_id, url)).await.unwrap();
-
-        // let sender = self.get_sender();
-        // runtime().spawn(clone!(
-        //     #[strong]
-        //     sender,
-        //     async move {
-        //     }
-        // ));
     }
 }
 
@@ -193,7 +174,6 @@ impl BrowserWindow {
         self.log.scroll_to_mark(&mark, 0.0, true, 0.0, 1.0);
     }
 
-    #[allow(dead_code)]
     pub(crate) fn close_tab(&self, tab_id: Uuid) {
         let mut manager = self.tab_manager.lock().unwrap();
         if manager.tab_count() == 1 {
@@ -212,10 +192,14 @@ impl BrowserWindow {
         rt.block_on(self.refresh_tabs_async())
     }
 
-    pub(crate) async fn refresh_tabs_async(&self) {
+    async fn refresh_tabs_async(&self) {
         let mut manager = self.tab_manager.lock().unwrap();
         let commands = manager.commands();
         drop(manager);
+
+        println!("Entering refresh_tabs_async ------------------------------------");
+
+        dbg!(&commands);
 
         for cmd in commands {
             println!("Processing command: {:?}", cmd);
@@ -228,7 +212,7 @@ impl BrowserWindow {
                     let tab = manager.get_tab(manager.page_to_tab(page_num).unwrap()).unwrap().clone();
                     drop(manager);
 
-                    let label = self.create_tab_label(true, &tab);
+                    let label = self.create_tab_label(tab.is_loading(), &tab);
                     let default_page = self.generate_default_page();
                     self.tab_bar.insert_page(&default_page, Some(&label), Some(page_num));
                 }
@@ -248,15 +232,48 @@ impl BrowserWindow {
                 TabCommand::Unpin(_) => {}
                 TabCommand::Private(_) => {}
                 TabCommand::Update(page_num) => {
+                //     let manager = self.tab_manager.lock().unwrap();
+                //     let tab = manager.get_tab(manager.page_to_tab(page_num).unwrap()).unwrap().clone();
+                //     drop(manager);
+                //     let label = self.create_tab_label(false, &tab);
+                //     let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
+                //     self.tab_bar.set_tab_label(&page_child, Some(&label));
+                // }
+                // TabCommand::UpdateContent(page_num) => {
                     let manager = self.tab_manager.lock().unwrap();
                     let tab = manager.get_tab(manager.page_to_tab(page_num).unwrap()).unwrap().clone();
                     drop(manager);
-                    let label = self.create_tab_label(false, &tab);
-                    let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
-                    self.tab_bar.set_tab_label(&page_child, Some(&label));
+
+                    let scrolled_window = gtk4::ScrolledWindow::builder()
+                        .hscrollbar_policy(gtk4::PolicyType::Never)
+                        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+                        .vexpand(true)
+                        .build();
+
+                    let content = TextView::builder()
+                        .editable(false)
+                        .wrap_mode(gtk4::WrapMode::Word)
+                        .build();
+                    content.buffer().set_text(&tab.content());
+                    scrolled_window.set_child(Some(&content));
+
+                    let tab_label = self.create_tab_label(false, &tab);
+
+                    // We need to remove the page, and read it in order to change the page content. Also,
+                    // we must make sure we select the tab again.
+                    self.tab_bar.remove_page(Some(page_num));
+                    self.tab_bar.insert_page(&scrolled_window, Some(&tab_label), Some(page_num));
+                    self.tab_bar.set_current_page(Some(page_num));
                 }
             }
         }
+
+        let mut manager = self.tab_manager.lock().unwrap();
+        let commands = manager.commands();
+        drop(manager);
+        dbg!(&commands);
+
+        println!("Exiting refresh_tabs_async ------------------------------------");
     }
 
     /// generates a tab label based on the tab info
@@ -289,12 +306,11 @@ impl BrowserWindow {
             tab_btn.set_child(Some(&img));
 
             let window_clone = self.obj().clone();
-            let tab_clone = tab.clone();
-            tab_btn.connect_clicked(move |_btn| {
-                info!("Clicked close button for tab {}", tab_clone.id());
-                let imp = window_clone.imp(); // `imp()` is now accessible on `ApplicationWindow`
-                imp.close_tab(tab_clone.id());
-                imp.refresh_tabs();
+            let tab_id = tab.id().clone();
+            tab_btn.connect_clicked(move |_| {
+                info!("Clicked close button for tab {}", tab_id);
+                window_clone.imp().close_tab(tab_id);
+                _ = window_clone.imp().get_sender().send_blocking(Message::RefreshTabs());
             });
 
             label_vbox.append(&tab_btn);
@@ -374,7 +390,7 @@ impl BrowserWindow {
 
     /// Handles all message coming from the async (tokio) tasks
     pub async fn handle_message(&self, message: Message) {
-        // info!("Received a message: {:?}", message);
+        info!("Received a message: {:?}", message);
 
         match message {
             Message::RefreshTabs() => {
@@ -384,17 +400,18 @@ impl BrowserWindow {
                 let tab = GosubTab::new(url.as_str(), url.as_str());
                 let tab_id = tab.id();
 
-                let tab_label = self.create_tab_label(true, &tab);
-                let page_num = self.tab_bar.append_page(
-                    &self.generate_default_page(),
-                    Some(&tab_label),
-                );
-                self.tab_bar.set_current_page(Some(page_num));
+                // let tab_label = self.create_tab_label(true, &tab);
+                // let page_num = self.tab_bar.append_page(
+                //     &self.generate_default_page(),
+                //     Some(&tab_label),
+                // );
+                // self.tab_bar.set_current_page(Some(page_num));
 
                 let mut manager = self.tab_manager.lock().unwrap();
-                manager.add_tab(tab, Some(page_num.try_into().unwrap()));
-                // manager.set_active(tab_id);
+                manager.add_tab(tab, None);
+                manager.notify_tab_changed(tab_id);
                 drop(manager);
+                self.refresh_tabs();
 
                 self.load_favicon_async(tab_id);
                 self.load_url_async(tab_id);
@@ -406,18 +423,21 @@ impl BrowserWindow {
                 let mut manager = self.tab_manager.lock().unwrap();
                 let mut tab = manager.get_tab(tab_id).unwrap().clone();
 
-                let page_num = manager.get_page_num_by_tab(tab_id).unwrap();
+                let _page_num = manager.get_page_num_by_tab(tab_id).unwrap();
                 tab.set_favicon(None);
                 tab.set_title(url.as_str());
                 tab.set_url(url.as_str());
+                tab.set_loading(true);
 
                 manager.update_tab(tab_id, &tab);
                 drop(manager);
 
-                // Create loading label and add it to the tab bar
-                let tab_label = self.create_tab_label(true, &tab);
-                let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
-                self.tab_bar.set_tab_label(&page_child, Some(&tab_label));
+                // // Create loading label and add it to the tab bar
+                // let tab_label = self.create_tab_label(true, &tab);
+                // let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
+                // self.tab_bar.set_tab_label(&page_child, Some(&tab_label));
+
+                self.refresh_tabs();
 
                 // Now, load favicon and url content
                 self.load_favicon_async(tab_id);
@@ -446,75 +466,31 @@ impl BrowserWindow {
                 manager.update_tab(tab_id, &tab);
                 drop(manager);
 
-                let tab_label = self.create_tab_label(false, &tab);
+                self.refresh_tabs();
 
-                let manager = self.tab_manager.lock().unwrap();
-                let page_num = manager.get_page_num_by_tab(tab_id).unwrap();
-                drop(manager);
-
-                let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
-                self.tab_bar.set_tab_label(&page_child, Some(&tab_label));
+                // let tab_label = self.create_tab_label(false, &tab);
+                //
+                // let manager = self.tab_manager.lock().unwrap();
+                // let page_num = manager.get_page_num_by_tab(tab_id).unwrap();
+                // drop(manager);
+                //
+                // let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
+                // self.tab_bar.set_tab_label(&page_child, Some(&tab_label));
             }
             Message::UrlLoaded(tab_id, html_content) => {
                 let mut manager = self.tab_manager.lock().unwrap();
                 let mut tab = manager.get_tab(tab_id).unwrap().clone();
                 tab.set_content(html_content.clone());
+                tab.set_loading(false);
                 manager.update_tab(tab_id, &tab);
                 drop(manager);
 
-                let tab_label = self.create_tab_label(false, &tab);
-
-                let scrolled_window = gtk4::ScrolledWindow::builder()
-                    .hscrollbar_policy(gtk4::PolicyType::Never)
-                    .vscrollbar_policy(gtk4::PolicyType::Automatic)
-                    .vexpand(true)
-                    .build();
-
-                let content = TextView::builder()
-                    .editable(false)
-                    .wrap_mode(gtk4::WrapMode::Word)
-                    .build();
-                content.buffer().set_text(&html_content);
-                scrolled_window.set_child(Some(&content));
-
-                let manager = self.tab_manager.lock().unwrap();
-                let page_num = manager.get_page_num_by_tab(tab_id).unwrap();
-                drop(manager);
-
-                // We need to remove the page, and read it in order to change the page content. Also,
-                // we must make sure we select the tab again.
-                self.tab_bar.remove_page(Some(page_num));
-                self.tab_bar.insert_page(&scrolled_window, Some(&tab_label), Some(page_num));
-                self.tab_bar.set_current_page(Some(page_num));
+                self.refresh_tabs();
             }
-            Message::Log(_) => {}
+            Message::Log(msg) => {
+                self.log(msg.as_str());
+            }
         }
-        //     Message::LoadUrl(tab_id, url) => {
-        //         let sender = self.get_sender();
-        //         runtime().spawn(clone!(
-        //             #[strong]
-        //             sender,
-        //             async move {
-        //                 self.load_url(tab_id, sender).await;
-        //             }
-        //         ));
-        //     }
-        //     Message::FaviconLoaded(tab_id, icon) => {
-        //         let mut manager = self.tab_manager.lock().unwrap();
-        //         let mut tab = manager.get_tab(tab_id).unwrap().clone();
-        //         tab.set_favicon(Some(icon));
-        //         manager.update_tab(tab_id, &tab);
-        //     }
-        //     Message::UrlLoaded(tab_id, content) => {
-        //         let mut manager = self.tab_manager.lock().unwrap();
-        //         let mut tab = manager.get_tab(tab_id).unwrap().clone();
-        //         tab.set_content(content);
-        //         manager.update_tab(tab_id, &tab);
-        //     }
-        //     Message::Log(message) => {
-        //         self.log(message.as_str());
-        //     }
-        // }
     }
 }
 

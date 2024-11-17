@@ -113,7 +113,7 @@ pub enum TabCommand {
     Pin(u32),       // Pin index
     Unpin(u32),     // Unpin index
     Private(u32),   // Make private tab
-    Update(u32),    // Update index
+    Update(u32),    // Update index (tab + content)
     Insert(u32),    // Insert index
     Activate(u32),  // set as active
 }
@@ -234,6 +234,17 @@ impl GosubTabManager {
             println!("removing tab at index {}", index);
             self.tab_order.remove(index);
             self.commands.push(TabCommand::Close(index as u32));
+
+            // Set active tab to the last tab. Assumes there is always one tab
+            if index == 0 {
+                if let Some(new_active_tab) = self.tab_order.get(0) {
+                    self.set_active(*new_active_tab);
+                }
+            } else {
+                if let Some(new_active_tab) = self.tab_order.get(index - 1) {
+                    self.set_active(*new_active_tab);
+                }
+            }
         }
 
         self.tabs.remove(&tab_id);
