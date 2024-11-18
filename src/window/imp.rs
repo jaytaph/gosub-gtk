@@ -215,7 +215,12 @@ impl BrowserWindow {
 
                     let label = self.create_tab_label(tab.is_loading(), &tab);
                     let default_page = self.generate_default_page();
-                    self.tab_bar.insert_page(&default_page, Some(&label), Some(page_num));
+                    let page_id = self.tab_bar.insert_page(&default_page, Some(&label), Some(page_num));
+
+                    // We can reorder tab, unless it's pinned/sticky
+                    if let Some(page) = self.tab_bar.nth_page(Some(page_id)) {
+                        self.tab_bar.set_tab_reorderable(&page, !tab.is_sticky());
+                    }
                 }
                 TabCommand::Close(page_num) => {
                     self.tab_bar.remove_page(Some(page_num));
@@ -233,14 +238,6 @@ impl BrowserWindow {
                 TabCommand::Unpin(_) => {}
                 TabCommand::Private(_) => {}
                 TabCommand::Update(page_num) => {
-                //     let manager = self.tab_manager.lock().unwrap();
-                //     let tab = manager.get_tab(manager.page_to_tab(page_num).unwrap()).unwrap().clone();
-                //     drop(manager);
-                //     let label = self.create_tab_label(false, &tab);
-                //     let page_child = self.tab_bar.nth_page(Some(page_num)).unwrap();
-                //     self.tab_bar.set_tab_label(&page_child, Some(&label));
-                // }
-                // TabCommand::UpdateContent(page_num) => {
                     let manager = self.tab_manager.lock().unwrap();
                     let tab = manager.get_tab(manager.page_to_tab(page_num).unwrap()).unwrap().clone();
                     drop(manager);
@@ -263,8 +260,14 @@ impl BrowserWindow {
                     // We need to remove the page, and read it in order to change the page content. Also,
                     // we must make sure we select the tab again.
                     self.tab_bar.remove_page(Some(page_num));
-                    self.tab_bar.insert_page(&scrolled_window, Some(&tab_label), Some(page_num));
+                    let page_id = self.tab_bar.insert_page(&scrolled_window, Some(&tab_label), Some(page_num));
                     self.tab_bar.set_current_page(Some(page_num));
+
+                    // We can reorder tab, unless it's pinned/sticky
+                    if let Some(page) = self.tab_bar.nth_page(Some(page_id)) {
+                        self.tab_bar.set_tab_reorderable(&page, !tab.is_sticky());
+                    }
+
                 }
             }
         }
