@@ -8,9 +8,9 @@ use log::info;
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use async_channel::{Receiver, Sender};
-use uuid::Uuid;
-use crate::tab::{GosubTab, GosubTabManager, TabCommand};
+use crate::tab::{GosubTab, GosubTabManager, TabCommand, TabId};
 use crate::{fetcher, runtime};
+use crate::tab_wiget::TabWidget;
 use crate::utils::convert_to_pixbuf;
 use crate::window::message::Message;
 
@@ -175,7 +175,7 @@ impl BrowserWindow {
         self.log.scroll_to_mark(&mark, 0.0, true, 0.0, 1.0);
     }
 
-    pub(crate) fn close_tab(&self, tab_id: Uuid) {
+    pub(crate) fn close_tab(&self, tab_id: TabId) {
         let mut manager = self.tab_manager.lock().unwrap();
         if manager.tab_count() == 1 {
             self.log("Cannot close the last tab");
@@ -215,7 +215,14 @@ impl BrowserWindow {
 
                     let label = self.create_tab_label(tab.is_loading(), &tab);
                     let default_page = self.generate_default_page();
-                    self.tab_bar.insert_page(&default_page, Some(&label), Some(page_num));
+
+                    let tab_widget = TabWidget::new(tab.id(), &default_page);
+                    let page_id = self.tab_bar.insert_page(&tab_widget, Some(&label), Some(page_num));
+
+                    // We can reorder tab, unless it's pinned/sticky
+                    if let Some(page) = self.tab_bar.nth_page(Some(page_id)) {
+                        self.tab_bar.set_tab_reorderable(&page, !tab.is_sticky());
+                    }
                 }
                 TabCommand::Close(page_num) => {
                     self.tab_bar.remove_page(Some(page_num));
@@ -257,13 +264,16 @@ impl BrowserWindow {
                         .build();
                     content.buffer().set_text(&tab.content());
                     scrolled_window.set_child(Some(&content));
+                    let tab_widget = TabWidget::new(tab.id(), &scrolled_window);
 
                     let tab_label = self.create_tab_label(false, &tab);
+
 
                     // We need to remove the page, and read it in order to change the page content. Also,
                     // we must make sure we select the tab again.
                     self.tab_bar.remove_page(Some(page_num));
-                    self.tab_bar.insert_page(&scrolled_window, Some(&tab_label), Some(page_num));
+                    self.tab_bar.insert_page(&tab_widget, Some(&tab_label), Some(page_num));
+
                     self.tab_bar.set_current_page(Some(page_num));
                 }
             }
@@ -341,7 +351,7 @@ impl BrowserWindow {
         vbox
     }
 
-    fn load_favicon_async(&self, tab_id: Uuid) {
+    fn load_favicon_async(&self, tab_id: TabId) {
         info!("Fetching favicon for tab: {}", tab_id);
 
         let manager = self.tab_manager.lock().unwrap();
@@ -361,7 +371,7 @@ impl BrowserWindow {
         });
     }
 
-    fn load_url_async(&self, tab_id: Uuid) {
+    fn load_url_async(&self, tab_id: TabId) {
         let manager = self.tab_manager.lock().unwrap();
         let tab = manager.get_tab(tab_id).unwrap();
         let url = tab.url().to_string();

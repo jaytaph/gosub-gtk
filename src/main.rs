@@ -4,6 +4,7 @@ mod dialog;
 mod fetcher;
 mod application;
 mod utils;
+mod tab_wiget;
 
 use std::sync::OnceLock;
 use adw::gdk::Display;
